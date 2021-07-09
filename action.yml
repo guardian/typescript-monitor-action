@@ -1,20 +1,20 @@
 name: 'TS Error Check'
 description: 'Check the amount of TypeScript and/or ESLint errors on a branch versus main'
 inputs:
-  check-typescript:  # id of input
+  repo-token:
+    required: true
+  check-typescript:
     description: 'Whether or not to check for TS errors'
     default: true
-  check-linting:  # id of input
-    description: 'Whether or not to check for linting errors'
+  check-linting:
+    description: 'Whether or not to check for ESLint errors'
     default: true
-  lint-script:  # id of input
-    description: 'The script command to run when linting the codebase'
+  ts-script:
+    description: 'The script command for the Typescript compiler'
+    default: 'npx tsc'
+  lint-script:
+    description: 'The script command for ESLint'
     default: 'npx eslint'
-outputs:
-  ts-errors: # id of output
-    description: 'The amount of TypeScript errors'
-  lint-errors: # id of output
-    description: 'The amount of linting errors'
 runs:
   using: 'node12'
   main: 'index.js'
