@@ -8,21 +8,23 @@ const lintInput = 'check-linting';
 const tsScriptInput = 'ts-script';
 const lintScriptInput = 'lint-script';
 
-async function execWithOutput(command) {
+async function execWithOutput(command, args = []) {
 	let output = '';
 	
-	const options = Object.create(null);
-	options.listeners = {
-		stdout: (data) => {
-			output += data.toString();
+	const options = {
+		silent: true,
+		listeners: {
+			stdout: (data) => {
+				output += data.toString();
+			},
+			stderr: (data) => {
+				output += data.toString();
+			}
 		},
-		stderr: (data) => {
-			output += data.toString();
-		}
 	};
 	
 	try {
-		await exec(command);
+		await exec(command, args, options);
 	} catch (error) {}
 	
 	return output;
@@ -56,7 +58,7 @@ async function getTypescriptErrorCount() {
 
 async function getLintErrorCount() {
 	const script = getInput(lintScriptInput);
-	const { output, error } = await execWithOutput([script, "-f lint-formatter.js"]);
+	const { output, error } = await execWithOutput(script, ["-f lint-formatter.js"]);
 	if (output) {
 		const captures = /^Errors: (?<errorCount>\d+)$/gm.exec(output);
 		return captures.groups.errorCount;
@@ -81,7 +83,7 @@ async function installStep(branch, installScript) {
 
 async function safeAccess(filePath) {
 	try {
-		await fs.promises.access(filename, fs.constants.F_OK);
+		await fs.promises.access(filePath, fs.constants.F_OK);
 		return true;
 	} catch (e) {}
 	return false;
@@ -89,8 +91,8 @@ async function safeAccess(filePath) {
 
 async function getInstallScript() {
 	const cwd = process.cwd();
-	const hasYarnLock = safeAccess(path.resolve(cwd, 'yarn.lock'));
-	const hasPackageLock = safeAccess(path.resolve(cwd, 'package-lock.json'));
+	const hasYarnLock = await safeAccess(path.resolve(cwd, 'yarn.lock'));
+	const hasPackageLock = await safeAccess(path.resolve(cwd, 'package-lock.json'));
 	
 	if (hasYarnLock) {
 		return 'yarn --frozen-lockfile';
