@@ -7485,10 +7485,18 @@ async function installStep(branch, installScript) {
 	endGroup();
 }
 
-function getInstallScript() {
+async function safeAccess(filePath) {
+	try {
+		await fs.promises.access(filename, fs.constants.F_OK);
+		return true;
+	} catch (e) {}
+	return false;
+}
+
+async function getInstallScript() {
 	const cwd = process.cwd();
-	const hasYarnLock = fs.accessSync(__nccwpck_require__.ab + "yarn.lock");
-	const hasPackageLock = fs.accessSync(path.resolve(cwd, 'package-lock.json'));
+	const hasYarnLock = safeAccess(__nccwpck_require__.ab + "yarn.lock");
+	const hasPackageLock = safeAccess(path.resolve(cwd, 'package-lock.json'));
 	
 	if (hasYarnLock) {
 		return 'yarn --frozen-lockfile';
@@ -7513,7 +7521,7 @@ async function run(octokit, context) {
 	const doTsCheck = getInput(tsInput);
 	const doLintCheck = getInput(lintInput);
 	
-	const installScript = getInstallScript();
+	const installScript = await getInstallScript();
 	
 	try {
 		debug('pr' + JSON.stringify(context.payload, null, 2));
