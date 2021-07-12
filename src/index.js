@@ -10,15 +10,14 @@ const lintScriptInput = 'lint-script';
 
 async function execWithOutput(command) {
 	let output = '';
-	let error = '';
-
+	
 	const options = Object.create(null);
 	options.listeners = {
 		stdout: (data) => {
-			myOutput += data.toString();
+			output += data.toString();
 		},
 		stderr: (data) => {
-			myError += data.toString();
+			output += data.toString();
 		}
 	};
 	
@@ -26,22 +25,19 @@ async function execWithOutput(command) {
 		await exec(command);
 	} catch (error) {}
 	
-	return {
-		output,
-		error,
-	}
+	return output;
 }
 
 async function getTypescriptErrorCount() {
 	const script = getInput(tsScriptInput);
-	const { output, error } = await execWithOutput(script);
+	const output = await execWithOutput(script);
 	
 	if (output) {
 		const lines = output.split(/(\r?\n)/g);
 	
 		return lines.reduce((errorCount, line) => {
 			const lineIsError =
-				/^([^(]*(\.tsx|\.ts)).*?(TS\d+):\s(.*)$/gm.exec(
+				/error TS\d+:/gm.exec(
 					line,
 				);
 	
