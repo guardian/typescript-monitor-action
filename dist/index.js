@@ -7766,7 +7766,7 @@ const { getInput, setFailed } = __nccwpck_require__(2186);
 const { context, getOctokit } = __nccwpck_require__(5438);
 const run = __nccwpck_require__(4351);
 
-const tokenInput = 'repo-token'
+const tokenInput = 'repo-token';
 
 (async () => {
 	try {

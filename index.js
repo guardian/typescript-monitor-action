@@ -2,7 +2,7 @@ const { getInput, setFailed } = require('@actions/core');
 const { context, getOctokit } = require('@actions/github');
 const run = require('./src/index');
 
-const tokenInput = 'repo-token'
+const tokenInput = 'repo-token';
 
 (async () => {
 	try {
