@@ -1,4 +1,4 @@
-# Typescript and ESLint error checking action
+# Typescript Monitor Action
 
 This action checks the amount of Typescript and/or ESLint errors on a pull request compared to the base branch. It's intended to be used in migration projects, when migrating an existing project to Typescript or expanding the linting rules, to allow existing code that has errors to not break builds but without allowing new PRs to introduce further errors to the migrated code.
 
@@ -17,6 +17,11 @@ Whether or not to check for TS errors, using the project's `tsconfig.json`.
 
 Whether or not to check for linting errors, using the provided lint script.
 **Default**: true
+
+### 'ts-script'
+
+The TS compilation script to run.
+**Default**: 'npx tsc'
 
 ### 'lint-script'
 
@@ -37,4 +42,5 @@ The number of linting errors, as compared to the main branch.
 
 uses: actions/ts-error-check@v0.1
 with:
+  install-script
   lint-script: 'yarn lint:check'

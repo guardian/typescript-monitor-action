@@ -1,8 +1,8 @@
+const fs = require('fs');
+const path = require('path');
 const { getInput, setFailed, startGroup, endGroup, debug } = require('@actions/core');
-const { context, getOctokit } = require('@actions/github');
 const { exec } = require('@actions/exec');
 
-const tokenInput = 'repo-token'
 const tsInput = 'check-typescript';
 const lintInput = 'check-linting';
 const tsScriptInput = 'ts-script';
@@ -72,14 +72,28 @@ async function getErrorCounts(doTs, doLint) {
 	}
 }
 
-async function installStep(branch) {
+async function installStep(branch, installScript) {
 	startGroup(`[${branch}] Install Dependencies`);
 	console.log(`Installing using yarn`)
-	await exec('yarn --frozen-lockfile');
+	await exec(installScript);
 	endGroup();
 }
 
-async function run(octokit, context, token) {
+function getInstallScript() {
+	const cwd = process.cwd();
+	const hasYarnLock = fs.accessSync(path.resolve(cwd, 'yarn.lock'));
+	const hasPackageLock = fs.accessSync(path.resolve(cwd, 'package-lock.json'));
+	
+	if (hasYarnLock) {
+		return 'yarn --frozen-lockfile';
+	} else if (hasPackageLock) {
+		return 'npm ci';
+	}
+
+	throw new Error('Could not detect the project\'s package manager');
+}
+
+async function run(octokit, context) {
 	const errorCounts = {
 		base: {
 			typescript: null,
@@ -93,8 +107,8 @@ async function run(octokit, context, token) {
 	const doTsCheck = getInput(tsInput);
 	const doLintCheck = getInput(lintInput);
 	
-	const { owner, repo, number: pull_number } = context.issue;
-
+	const installScript = getInstallScript();
+	
 	try {
 		debug('pr' + JSON.stringify(context.payload, null, 2));
 	} catch (e) { }
@@ -111,7 +125,7 @@ async function run(octokit, context, token) {
 		);
 	}
 	
-	await installStep('current');
+	await installStep('current', installScript);
 
 	startGroup(`[current] Checking for errors`);
 	console.log('Getting error counts for the branch');
@@ -139,7 +153,7 @@ async function run(octokit, context, token) {
 	}
 	endGroup();
 	
-	await installStep('base');
+	await installStep('base', installScript);
 	
 	startGroup(`[base] Checking for errors`);
 	console.log('Getting error counts for the base branch');
