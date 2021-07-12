@@ -36,8 +36,7 @@ async function getTypescriptErrorCount() {
 		
 	if (output) {
 		const lines = output.split(/(\r?\n)/g);
-	
-		return lines.reduce((errorCount, line) => {
+		const errorAmount = lines.reduce((errorCount, line) => {
 			const lineIsError =
 				/error TS\d+:/gm.exec(
 					line,
@@ -49,6 +48,8 @@ async function getTypescriptErrorCount() {
 	
 			return errorCount;
 		}, 0);
+		
+		console.log(`Found ${errorAmount} TS errors`);
 	} else {
 		throw new Error('Could not check for Typescript errors');
 	}
@@ -59,6 +60,7 @@ async function getLintErrorCount() {
 	const output = await execWithOutput(script);
 	if (output) {
 		const captures = /problems \((?<errorCount>\d+) errors/gm.exec(output);
+		console.log(`Found ${captures.groups.errorCount} ESLint errors`);
 		return captures.groups.errorCount;
 	} else {
 		throw new Error('Could not check for ESLint errors');
@@ -74,7 +76,7 @@ async function getErrorCounts(doTs, doLint) {
 
 async function installStep(branch, installScript) {
 	startGroup(`[${branch}] Install Dependencies`);
-	console.log(`Installing using yarn`)
+	console.log(`Installing using ${installScript}`)
 	await exec(installScript);
 	endGroup();
 }
