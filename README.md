@@ -42,5 +42,4 @@ The number of linting errors, as compared to the main branch.
 
 uses: actions/ts-error-check@v0.1
 with:
-  install-script
   lint-script: 'yarn lint:check'
