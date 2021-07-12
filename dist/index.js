@@ -7462,9 +7462,9 @@ async function getTypescriptErrorCount() {
 
 async function getLintErrorCount() {
 	const script = getInput(lintScriptInput);
-	const output = await execWithOutput(script, ["-f ./src/lint-formatter.js"]);
+	const output = await execWithOutput(script);
 	if (output) {
-		const captures = /^Errors: (?<errorCount>\d+)$/gm.exec(output);
+		const captures = /problems \((?<errorCount>\d+) errors/gm.exec(output);
 		return captures.groups.errorCount;
 	} else {
 		throw new Error('Could not check for ESLint errors');
