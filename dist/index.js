@@ -7438,6 +7438,8 @@ async function getTypescriptErrorCount() {
 	const script = getInput(tsScriptInput);
 	const output = await execWithOutput(script);
 	
+	console.log(`Output length is ${output.length}`);
+	
 	if (output) {
 		const lines = output.split(/(\r?\n)/g);
 	
@@ -7454,7 +7456,7 @@ async function getTypescriptErrorCount() {
 			return errorCount;
 		}, 0);
 	} else {
-		throw new Error(error || 'Could not check for Typescript errors');
+		throw new Error('Could not check for Typescript errors');
 	}
 }
 
