@@ -22,7 +22,9 @@ async function execWithOutput(command) {
 		}
 	};
 	
-	await exec(command);
+	try {
+		await exec(command);
+	} catch (error) {}
 	
 	return {
 		output,
