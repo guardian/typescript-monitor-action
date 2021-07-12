@@ -122,14 +122,18 @@ async function run(octokit, context) {
 	} catch (e) { }
 
 	let baseSha, baseRef;
-	if (context.eventName == "pull_request" || context.eventName == 'pull_request_target') {
+	if (context.eventName == "push") {
+		baseSha = context.payload.before;
+		baseRef = context.payload.ref;
+
+	} else if (context.eventName == "pull_request" || context.eventName == 'pull_request_target') {
 		const pr = context.payload.pull_request;
 		baseSha = pr.base.sha;
 		baseRef = pr.base.ref;
 
 	} else {
 		throw new Error(
-			`Unsupported eventName in github.context: ${context.eventName}. Only "pull_request" and "pull_request_target" triggered workflows are currently supported.`
+			`Unsupported eventName in github.context: ${context.eventName}. Only "pull_request", "pull_request_target" and "push" triggered workflows are currently supported.`
 		);
 	}
 	
