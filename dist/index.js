@@ -7523,6 +7523,10 @@ async function run(octokit, context) {
 	
 	const installScript = await getInstallScript();
 	
+	if (getInput('cwd')) {
+		process.chdir(getInput('cwd'));
+	}
+	
 	try {
 		debug('pr' + JSON.stringify(context.payload, null, 2));
 	} catch (e) { }
