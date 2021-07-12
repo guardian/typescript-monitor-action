@@ -7439,9 +7439,7 @@ async function execWithOutput(command, args = []) {
 async function getTypescriptErrorCount() {
 	const script = getInput(tsScriptInput);
 	const output = await execWithOutput(script);
-	
-	console.log(`Output length is ${output.length}`);
-	
+		
 	if (output) {
 		const lines = output.split(/(\r?\n)/g);
 	
@@ -7464,12 +7462,12 @@ async function getTypescriptErrorCount() {
 
 async function getLintErrorCount() {
 	const script = getInput(lintScriptInput);
-	const { output, error } = await execWithOutput(script, ["-f lint-formatter.js"]);
+	const output = await execWithOutput(script, ["-f ./src/lint-formatter.js"]);
 	if (output) {
 		const captures = /^Errors: (?<errorCount>\d+)$/gm.exec(output);
 		return captures.groups.errorCount;
 	} else {
-		throw new Error(error || 'Could not check for ESLint errors');
+		throw new Error('Could not check for ESLint errors');
 	}
 }
 
