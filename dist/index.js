@@ -7401,210 +7401,6 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 4351:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-const fs = __nccwpck_require__(5747);
-const path = __nccwpck_require__(5622);
-const { getInput, setFailed, startGroup, endGroup, debug } = __nccwpck_require__(2186);
-const { exec } = __nccwpck_require__(1514);
-
-const tsInput = 'check-typescript';
-const lintInput = 'check-linting';
-const tsScriptInput = 'ts-script';
-const lintScriptInput = 'lint-script';
-
-async function execWithOutput(command, args = []) {
-	let output = '';
-	
-	const options = {
-		silent: true,
-		listeners: {
-			stdout: (data) => {
-				output += data.toString();
-			},
-			stderr: (data) => {
-				output += data.toString();
-			}
-		},
-	};
-	
-	try {
-		await exec(command, args, options);
-	} catch (error) {}
-	
-	return output;
-}
-
-async function getTypescriptErrorCount() {
-	const script = getInput(tsScriptInput);
-	const output = await execWithOutput(script);
-		
-	if (output) {
-		const lines = output.split(/(\r?\n)/g);
-		const errorAmount = lines.reduce((errorCount, line) => {
-			const lineIsError =
-				/error TS\d+:/gm.exec(
-					line,
-				);
-	
-			if (lineIsError) {
-				return errorCount + 1;
-			}
-	
-			return errorCount;
-		}, 0);
-		
-		console.log(`Found ${errorAmount} TS errors`);
-	} else {
-		throw new Error('Could not check for Typescript errors');
-	}
-}
-
-async function getLintErrorCount() {
-	const script = getInput(lintScriptInput);
-	const output = await execWithOutput(script);
-	if (output) {
-		const captures = /problems \((?<errorCount>\d+) errors/gm.exec(output);
-		console.log(`Found ${captures.groups.errorCount} ESLint errors`);
-		return captures.groups.errorCount;
-	} else {
-		throw new Error('Could not check for ESLint errors');
-	}
-}
-
-async function getErrorCounts(doTs, doLint) {
-	return {
-		typescript: doTs ? await getTypescriptErrorCount() : null,
-		eslint: doLint ? await getLintErrorCount() : null,
-	}
-}
-
-async function installStep(branch, installScript) {
-	startGroup(`[${branch}] Install Dependencies`);
-	console.log(`Installing using ${installScript}`)
-	await exec(installScript);
-	endGroup();
-}
-
-async function safeAccess(filePath) {
-	try {
-		await fs.promises.access(filePath, fs.constants.F_OK);
-		return true;
-	} catch (e) {}
-	return false;
-}
-
-async function getInstallScript() {
-	const cwd = process.cwd();
-	const hasYarnLock = await safeAccess(__nccwpck_require__.ab + "yarn.lock");
-	const hasPackageLock = await safeAccess(path.resolve(cwd, 'package-lock.json'));
-	
-	if (hasYarnLock) {
-		return 'yarn --frozen-lockfile';
-	} else if (hasPackageLock) {
-		return 'npm ci';
-	}
-
-	throw new Error('Could not detect the project\'s package manager');
-}
-
-async function run(octokit, context) {
-	const errorCounts = {
-		base: {
-			typescript: null,
-			eslint: null,
-		},
-		branch: {
-			typescript: null,
-			eslint: null,
-		},
-	}
-	const doTsCheck = getInput(tsInput);
-	const doLintCheck = getInput(lintInput);
-	
-	const installScript = await getInstallScript();
-	
-	if (getInput('cwd')) {
-		process.chdir(getInput('cwd'));
-	}
-	
-	try {
-		debug('pr' + JSON.stringify(context.payload, null, 2));
-	} catch (e) { }
-
-	let baseSha, baseRef;
-	if (context.eventName == "push") {
-		baseSha = context.payload.before;
-		baseRef = context.payload.ref;
-
-	} else if (context.eventName == "pull_request" || context.eventName == 'pull_request_target') {
-		const pr = context.payload.pull_request;
-		baseSha = pr.base.sha;
-		baseRef = pr.base.ref;
-
-	} else {
-		throw new Error(
-			`Unsupported eventName in github.context: ${context.eventName}. Only "pull_request", "pull_request_target" and "push" triggered workflows are currently supported.`
-		);
-	}
-	
-	await installStep('current', installScript);
-
-	startGroup(`[current] Checking for errors`);
-	console.log('Getting error counts for the branch');
-	errorCounts.branch = await getErrorCounts(doTsCheck, doLintCheck);
-	endGroup();
-	
-	startGroup(`[base] Checkout target branch`);
-	try {
-		if (!baseRef) throw Error('missing context.payload.pull_request.base.ref');
-		await exec(`git fetch -n origin ${baseRef}`);
-		console.log('successfully fetched base.ref');
-	} catch (e) {
-		console.log('fetching base.ref failed', e.message);
-		try {
-			await exec(`git fetch -n origin ${baseSha}`);
-			console.log('successfully fetched base.sha');
-		} catch (e) {
-			console.log('fetching base.sha failed', e.message);
-			try {
-				await exec(`git fetch -n`);
-			} catch (e) {
-				console.log('fetch failed', e.message);
-			}
-		}
-	}
-	endGroup();
-	
-	await installStep('base', installScript);
-	
-	startGroup(`[base] Checking for errors`);
-	console.log('Getting error counts for the base branch');
-	errorCounts.base = await getErrorCounts(doTsCheck, doLintCheck);
-	endGroup();
-	
-	if (doTsCheck) {
-		const tsErrorCountChange = errorCounts.branch.typescript - errorCounts.base.typescript;
-		if (tsErrorCountChange > 0) {
-			setFailed('More TS errors were introduced');
-		}
-		console.log(`Change in TS errors: ${tsErrorCountChange}`);
-	}
-	
-	if (doLintCheck) {
-		const lintErrorCountChange = errorCounts.branch.typescript - errorCounts.base.typescript;
-		if (lintErrorCountChange > 0) {
-			setFailed('More lint errors were introduced');
-		}
-		console.log(`Change in lint errors: ${lintErrorCountChange}`);
-	}
-}
-
-module.exports = run;
-
-/***/ }),
-
 /***/ 2877:
 /***/ ((module) => {
 
@@ -7774,27 +7570,580 @@ module.exports = require("zlib");;
 /******/ 	}
 /******/ 	
 /************************************************************************/
+/******/ 	/* webpack/runtime/compat get default export */
+/******/ 	(() => {
+/******/ 		// getDefaultExport function for compatibility with non-harmony modules
+/******/ 		__nccwpck_require__.n = (module) => {
+/******/ 			var getter = module && module.__esModule ?
+/******/ 				() => (module['default']) :
+/******/ 				() => (module);
+/******/ 			__nccwpck_require__.d(getter, { a: getter });
+/******/ 			return getter;
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__nccwpck_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__nccwpck_require__.o(definition, key) && !__nccwpck_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__nccwpck_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__nccwpck_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
 /******/ 	if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = __dirname + "/";/************************************************************************/
 var __webpack_exports__ = {};
-// This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
+// This entry need to be wrapped in an IIFE because it need to be in strict mode.
 (() => {
-const { getInput, setFailed } = __nccwpck_require__(2186);
-const { context, getOctokit } = __nccwpck_require__(5438);
-const run = __nccwpck_require__(4351);
+"use strict";
+// ESM COMPAT FLAG
+__nccwpck_require__.r(__webpack_exports__);
 
-const tokenInput = 'repo-token';
+// EXTERNAL MODULE: ./node_modules/@actions/core/lib/core.js
+var core = __nccwpck_require__(2186);
+// EXTERNAL MODULE: ./node_modules/@actions/github/lib/github.js
+var github = __nccwpck_require__(5438);
+// EXTERNAL MODULE: external "path"
+var external_path_ = __nccwpck_require__(5622);
+var external_path_default = /*#__PURE__*/__nccwpck_require__.n(external_path_);
+// EXTERNAL MODULE: ./node_modules/@actions/exec/lib/exec.js
+var exec = __nccwpck_require__(1514);
+;// CONCATENATED MODULE: ./src/steps.ts
+var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (undefined && undefined.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (_) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
 
-(async () => {
-	try {
-		const token = getInput(tokenInput);
-		const octokit = getOctokit(token);
-		await run(octokit, context);
-	} catch (e) {
-		setFailed(e.message);
-	}
-})();
+
+function installStep(branch, installScript) {
+    return __awaiter(this, void 0, void 0, function () {
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    (0,core.startGroup)("[" + branch + "] Install Dependencies");
+                    console.log("Installing using " + installScript);
+                    return [4 /*yield*/, (0,exec.exec)(installScript)];
+                case 1:
+                    _a.sent();
+                    (0,core.endGroup)();
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+function checkoutBaseBranch(baseRef, baseSha) {
+    return __awaiter(this, void 0, void 0, function () {
+        var e_1, e_2, e_3;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    (0,core.startGroup)("[base] Checkout target branch");
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 3, , 12]);
+                    if (!baseRef)
+                        throw Error('missing context.payload.pull_request.base.ref');
+                    return [4 /*yield*/, (0,exec.exec)("git fetch -n origin " + baseRef)];
+                case 2:
+                    _a.sent();
+                    console.log('successfully fetched base.ref');
+                    return [3 /*break*/, 12];
+                case 3:
+                    e_1 = _a.sent();
+                    console.log('fetching base.ref failed', e_1.message);
+                    _a.label = 4;
+                case 4:
+                    _a.trys.push([4, 6, , 11]);
+                    return [4 /*yield*/, (0,exec.exec)("git fetch -n origin " + baseSha)];
+                case 5:
+                    _a.sent();
+                    console.log('successfully fetched base.sha');
+                    return [3 /*break*/, 11];
+                case 6:
+                    e_2 = _a.sent();
+                    console.log('fetching base.sha failed', e_2.message);
+                    _a.label = 7;
+                case 7:
+                    _a.trys.push([7, 9, , 10]);
+                    return [4 /*yield*/, (0,exec.exec)("git fetch -n")];
+                case 8:
+                    _a.sent();
+                    return [3 /*break*/, 10];
+                case 9:
+                    e_3 = _a.sent();
+                    console.log('fetch failed', e_3.message);
+                    return [3 /*break*/, 10];
+                case 10: return [3 /*break*/, 11];
+                case 11: return [3 /*break*/, 12];
+                case 12:
+                    (0,core.endGroup)();
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+
+// EXTERNAL MODULE: external "fs"
+var external_fs_ = __nccwpck_require__(5747);
+var external_fs_default = /*#__PURE__*/__nccwpck_require__.n(external_fs_);
+;// CONCATENATED MODULE: ./src/utils.ts
+var utils_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var utils_generator = (undefined && undefined.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (_) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+
+
+function stringToBool(booleanString) {
+    if (booleanString === 'true') {
+        return true;
+    }
+    return false;
+}
+function safeAccess(filePath) {
+    return utils_awaiter(this, void 0, void 0, function () {
+        var e_1;
+        return utils_generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    _a.trys.push([0, 2, , 3]);
+                    return [4 /*yield*/, external_fs_default().promises.access(filePath, (external_fs_default()).constants.F_OK)];
+                case 1:
+                    _a.sent();
+                    return [2 /*return*/, true];
+                case 2:
+                    e_1 = _a.sent();
+                    return [3 /*break*/, 3];
+                case 3: return [2 /*return*/, false];
+            }
+        });
+    });
+}
+function execWithOutput(command, args) {
+    if (args === void 0) { args = []; }
+    return utils_awaiter(this, void 0, void 0, function () {
+        var output, options, error_1;
+        return utils_generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    output = '';
+                    options = {
+                        silent: true,
+                        listeners: {
+                            stdout: function (data) {
+                                output += data.toString();
+                            },
+                            stderr: function (data) {
+                                output += data.toString();
+                            }
+                        },
+                    };
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 3, , 4]);
+                    return [4 /*yield*/, (0,exec.exec)(command, args, options)];
+                case 2:
+                    _a.sent();
+                    return [3 /*break*/, 4];
+                case 3:
+                    error_1 = _a.sent();
+                    return [3 /*break*/, 4];
+                case 4: return [2 /*return*/, output];
+            }
+        });
+    });
+}
+
+;// CONCATENATED MODULE: ./src/index.ts
+var src_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var src_generator = (undefined && undefined.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (_) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+
+
+
+
+var tsInput = 'check-typescript';
+var lintInput = 'check-linting';
+var tsScriptInput = 'ts-script';
+var lintScriptInput = 'lint-script';
+function getTypescriptErrorCount() {
+    return src_awaiter(this, void 0, void 0, function () {
+        var script, output, lines, errorAmount;
+        return src_generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    script = (0,core.getInput)(tsScriptInput);
+                    return [4 /*yield*/, execWithOutput(script)];
+                case 1:
+                    output = _a.sent();
+                    if (output) {
+                        lines = output.split(/(\r?\n)/g);
+                        errorAmount = lines.reduce(function (errorCount, line) {
+                            var lineIsError = /error TS\d+:/gm.exec(line);
+                            if (lineIsError) {
+                                return errorCount + 1;
+                            }
+                            return errorCount;
+                        }, 0);
+                        console.log("Found " + errorAmount + " TS errors");
+                        return [2 /*return*/, errorAmount];
+                    }
+                    else {
+                        throw new Error('Could not check for Typescript errors');
+                    }
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+function getLintErrorCount() {
+    var _a, _b;
+    return src_awaiter(this, void 0, void 0, function () {
+        var script, output, captures;
+        return src_generator(this, function (_c) {
+            switch (_c.label) {
+                case 0:
+                    script = (0,core.getInput)(lintScriptInput);
+                    return [4 /*yield*/, execWithOutput(script)];
+                case 1:
+                    output = _c.sent();
+                    if (output) {
+                        captures = /problems \((?<errorCount>\d+) errors/gm.exec(output);
+                        console.log("Found " + ((_a = captures === null || captures === void 0 ? void 0 : captures.groups) === null || _a === void 0 ? void 0 : _a.errorCount) + " ESLint errors");
+                        return [2 /*return*/, Number.parseInt(((_b = captures === null || captures === void 0 ? void 0 : captures.groups) === null || _b === void 0 ? void 0 : _b.errorCount) || '0')];
+                    }
+                    else {
+                        throw new Error('Could not check for ESLint errors');
+                    }
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+function getErrorCounts(doTs, doLint) {
+    return src_awaiter(this, void 0, void 0, function () {
+        var _a, _b;
+        var _c;
+        return src_generator(this, function (_d) {
+            switch (_d.label) {
+                case 0:
+                    _c = {};
+                    if (!doTs) return [3 /*break*/, 2];
+                    return [4 /*yield*/, getTypescriptErrorCount()];
+                case 1:
+                    _a = _d.sent();
+                    return [3 /*break*/, 3];
+                case 2:
+                    _a = 0;
+                    _d.label = 3;
+                case 3:
+                    _c.typescript = _a;
+                    if (!doLint) return [3 /*break*/, 5];
+                    return [4 /*yield*/, getLintErrorCount()];
+                case 4:
+                    _b = _d.sent();
+                    return [3 /*break*/, 6];
+                case 5:
+                    _b = 0;
+                    _d.label = 6;
+                case 6: return [2 /*return*/, (_c.eslint = _b,
+                        _c)];
+            }
+        });
+    });
+}
+function getBaseRef(context) {
+    if (context.eventName == "push") {
+        return {
+            baseSha: context.payload.before,
+            baseRef: context.payload.ref,
+        };
+    }
+    else if (context.eventName == "pull_request" || context.eventName == 'pull_request_target') {
+        var pr = context.payload.pull_request;
+        return {
+            baseSha: pr === null || pr === void 0 ? void 0 : pr.base.sha,
+            baseRef: pr === null || pr === void 0 ? void 0 : pr.base.ref,
+        };
+    }
+    else {
+        throw new Error("Unsupported eventName in github.context: " + context.eventName + ". Only \"pull_request\", \"pull_request_target\" and \"push\" triggered workflows are currently supported.");
+    }
+}
+function getInstallScript() {
+    return src_awaiter(this, void 0, void 0, function () {
+        var cwd, hasYarnLock, hasPackageLock;
+        return src_generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    cwd = process.cwd();
+                    return [4 /*yield*/, safeAccess(__nccwpck_require__.ab + "yarn.lock")];
+                case 1:
+                    hasYarnLock = _a.sent();
+                    return [4 /*yield*/, safeAccess(external_path_default().resolve(cwd, 'package-lock.json'))];
+                case 2:
+                    hasPackageLock = _a.sent();
+                    if (hasYarnLock) {
+                        return [2 /*return*/, 'yarn --frozen-lockfile'];
+                    }
+                    else if (hasPackageLock) {
+                        return [2 /*return*/, 'npm ci'];
+                    }
+                    throw new Error('Could not detect the project\'s package manager');
+            }
+        });
+    });
+}
+function run(context) {
+    return src_awaiter(this, void 0, void 0, function () {
+        var errorCounts, doTsCheck, doLintCheck, installScript, _a, baseSha, baseRef, _b, _c, tsErrorCountChange, lintErrorCountChange;
+        return src_generator(this, function (_d) {
+            switch (_d.label) {
+                case 0:
+                    errorCounts = {
+                        base: {
+                            typescript: 0,
+                            eslint: 0,
+                        },
+                        branch: {
+                            typescript: 0,
+                            eslint: 0,
+                        },
+                    };
+                    doTsCheck = stringToBool((0,core.getInput)(tsInput));
+                    doLintCheck = stringToBool((0,core.getInput)(lintInput));
+                    return [4 /*yield*/, getInstallScript()];
+                case 1:
+                    installScript = _d.sent();
+                    if ((0,core.getInput)('cwd')) {
+                        process.chdir((0,core.getInput)('cwd'));
+                    }
+                    try {
+                        (0,core.debug)('pr' + JSON.stringify(context.payload, null, 2));
+                    }
+                    catch (e) { }
+                    _a = getBaseRef(context), baseSha = _a.baseSha, baseRef = _a.baseRef;
+                    return [4 /*yield*/, installStep('current', installScript)];
+                case 2:
+                    _d.sent();
+                    (0,core.startGroup)("[current] Checking for errors");
+                    console.log('Getting error counts for the current branch');
+                    _b = errorCounts;
+                    return [4 /*yield*/, getErrorCounts(doTsCheck, doLintCheck)];
+                case 3:
+                    _b.branch = _d.sent();
+                    (0,core.endGroup)();
+                    checkoutBaseBranch(baseRef, baseSha);
+                    return [4 /*yield*/, installStep('base', installScript)];
+                case 4:
+                    _d.sent();
+                    (0,core.startGroup)("[base] Checking for errors");
+                    console.log('Getting error counts for the base branch');
+                    _c = errorCounts;
+                    return [4 /*yield*/, getErrorCounts(doTsCheck, doLintCheck)];
+                case 5:
+                    _c.base = _d.sent();
+                    (0,core.endGroup)();
+                    if (doTsCheck) {
+                        tsErrorCountChange = errorCounts.branch.typescript - errorCounts.base.typescript;
+                        if (tsErrorCountChange > 0) {
+                            (0,core.setFailed)('More TS errors were introduced');
+                        }
+                        console.log("Change in TS errors: " + tsErrorCountChange);
+                    }
+                    if (doLintCheck) {
+                        lintErrorCountChange = errorCounts.branch.eslint - errorCounts.base.eslint;
+                        if (lintErrorCountChange > 0) {
+                            (0,core.setFailed)('More lint errors were introduced');
+                        }
+                        console.log("Change in lint errors: " + lintErrorCountChange);
+                    }
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+
+;// CONCATENATED MODULE: ./index.ts
+var index_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var index_generator = (undefined && undefined.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (_) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+
+
+
+// const tokenInput = 'repo-token';
+(function () { return index_awaiter(void 0, void 0, void 0, function () {
+    var e_1;
+    return index_generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                // const token = getInput(tokenInput);
+                // const octokit = getOctokit(token);
+                return [4 /*yield*/, run(github.context)];
+            case 1:
+                // const token = getInput(tokenInput);
+                // const octokit = getOctokit(token);
+                _a.sent();
+                return [3 /*break*/, 3];
+            case 2:
+                e_1 = _a.sent();
+                (0,core.setFailed)(e_1.message);
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); })();
 
 })();
 

@@ -1,10 +1,10 @@
 {
-  "name": "ts-error-check",
+  "name": "typescript-monitor-action",
   "version": "1.0.0",
   "main": "index.js",
   "author": "Imogen Hardy <imogen.hardy@guardian.co.uk>",
   "scripts": {
-    "build": "ncc build index.js -o dist"
+    "build": "ncc build index.ts -o dist"
   },
   "dependencies": {
     "@actions/core": "^1.4.0",
@@ -12,6 +12,20 @@
     "@actions/github": "^5.0.0"
   },
   "devDependencies": {
-    "@vercel/ncc": "^0.28.6"
+    "@guardian/prettier": "^0.6.0",
+    "@types/node": "^16.3.1",
+    "@typescript-eslint/eslint-plugin": "^4.28.3",
+    "@typescript-eslint/parser": "^4.28.3",
+    "@vercel/ncc": "^0.28.6",
+    "eslint": "^7.30.0",
+    "eslint-config-airbnb": "^18.2.1",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-config-airbnb-typescript": "^12.3.1",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-import": "^2.23.4",
+    "eslint-plugin-prettier": "^3.4.0",
+    "prettier": "^2.3.2",
+    "prettier-eslint": "^12.0.0",
+    "typescript": "^4.3.5"
   }
 }
