@@ -7759,7 +7759,7 @@ function getChangeEmoji(errorChange) {
 function errorDiffLine(errorChange, checkType) {
     var changeWord = errorChange > 0 ? 'increased' : 'decreased';
     if (errorChange === 0) {
-        return checkType + " errors did not change " + getChangeEmoji(errorChange);
+        return checkType + " errors did not change " + getChangeEmoji(errorChange) + "\n";
     }
     return checkType + " errors " + changeWord + " by " + Math.abs(errorChange) + " " + getChangeEmoji(errorChange) + "\n";
 }
@@ -8318,7 +8318,7 @@ function run(octokit, context, token) {
                         (0,core.setFailed)("More " + formattedErrorCheckNames.eslint + " errors were introduced");
                         failed = true;
                     }) : '';
-                    actionLink = '\n\n<a href="https://github.com/preactjs/compressed-size-action"><sub>compressed-size-action</sub></a>';
+                    actionLink = '\n\n<a href="https://github.com/guardian/typescript-monitor-action"><sub>typescript-monitor-action</sub></a>';
                     summary = [tsSummary, lintSummary, actionLink].join('');
                     if (!(context.eventName !== 'pull_request' && context.eventName !== 'pull_request_target')) return [3 /*break*/, 7];
                     console.log('No PR associated with this action run. Not posting a check');

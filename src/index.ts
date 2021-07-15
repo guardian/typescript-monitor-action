@@ -183,7 +183,7 @@ export default async function run(octokit: InstanceType<typeof GitHub>, context:
 				},
 			) : ''
 	
-	const actionLink = '\n\n<a href="https://github.com/preactjs/compressed-size-action"><sub>compressed-size-action</sub></a>'
+	const actionLink = '\n\n<a href="https://github.com/guardian/typescript-monitor-action"><sub>typescript-monitor-action</sub></a>'
 	
 	const summary = [tsSummary, lintSummary, actionLink].join('');
 	
