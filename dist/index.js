@@ -8213,6 +8213,7 @@ function run(octokit, context, token) {
         return src_generator(this, function (_d) {
             switch (_d.label) {
                 case 0:
+                    console.log(JSON.stringify(context));
                     errorCounts = {
                         base: {
                             typescript: 0,
