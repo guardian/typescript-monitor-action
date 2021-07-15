@@ -7857,7 +7857,7 @@ function addOrUpdateComment(octokit, context, commentBody) {
                     associatedPRs = (_c.sent()).data;
                     prToUpdate = associatedPRs.find(function (pr) { return pr.state === 'open'; });
                     console.log("Commenting on PR number " + (prToUpdate === null || prToUpdate === void 0 ? void 0 : prToUpdate.id));
-                    issue_number = (_b = prToUpdate === null || prToUpdate === void 0 ? void 0 : prToUpdate.id) !== null && _b !== void 0 ? _b : issue_number;
+                    issue_number = (_b = prToUpdate === null || prToUpdate === void 0 ? void 0 : prToUpdate.number) !== null && _b !== void 0 ? _b : issue_number;
                     return [3 /*break*/, 4];
                 case 3:
                     error_5 = _c.sent();

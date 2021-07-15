@@ -111,7 +111,7 @@ export async function addOrUpdateComment(octokit: InstanceType<typeof GitHub>, c
 			)
 			const prToUpdate = associatedPRs.find(pr => pr.state === 'open');
 			console.log(`Commenting on PR number ${prToUpdate?.id}`);
-			issue_number = prToUpdate?.id ?? issue_number;
+			issue_number = prToUpdate?.number ?? issue_number;
 		} catch (error) {
 			console.log('Error getting PR to comment on', error)
 		}
