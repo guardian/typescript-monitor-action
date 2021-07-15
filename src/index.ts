@@ -154,7 +154,7 @@ export default async function run(octokit: InstanceType<typeof GitHub>, context:
 	errorCounts.branch = await getErrorCounts(doTsCheck, doLintCheck);
 	endGroup();
 	
-	checkoutBaseBranch(baseRef, baseSha);
+	await checkoutBaseBranch(baseRef, baseSha);
 	
 	await installStep('base', installScript);
 	

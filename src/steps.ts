@@ -51,7 +51,7 @@ async function getExistingComment(octokit: InstanceType<typeof GitHub>, commentI
 		const comments = (await octokit.rest.issues.listComments(commentInfo)).data;
 		for (let i = comments.length; i--;) {
 			const c = comments[i];
-			if (c.body && c.user?.type === 'Bot') {
+			if (c.body && c.user?.type === 'Bot' && /<sub>[\s\n]*typesript-monitor-action/.test(c.body)) {
 				return c.id
 			}
 		}

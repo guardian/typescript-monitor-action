@@ -7939,7 +7939,7 @@ function getExistingComment(octokit, commentInfo) {
                     comments = (_b.sent()).data;
                     for (i = comments.length; i--;) {
                         c = comments[i];
-                        if (c.body && ((_a = c.user) === null || _a === void 0 ? void 0 : _a.type) === 'Bot') {
+                        if (c.body && ((_a = c.user) === null || _a === void 0 ? void 0 : _a.type) === 'Bot' && /<sub>[\s\n]*typesript-monitor-action/.test(c.body)) {
                             return [2 /*return*/, c.id];
                         }
                     }
@@ -8298,15 +8298,17 @@ function run(octokit, context, token) {
                 case 4:
                     _b.branch = _d.sent();
                     (0,core.endGroup)();
-                    checkoutBaseBranch(baseRef, baseSha);
-                    return [4 /*yield*/, installStep('base', installScript)];
+                    return [4 /*yield*/, checkoutBaseBranch(baseRef, baseSha)];
                 case 5:
+                    _d.sent();
+                    return [4 /*yield*/, installStep('base', installScript)];
+                case 6:
                     _d.sent();
                     (0,core.startGroup)("[base] Checking for errors");
                     console.log('Getting error counts for the base branch');
                     _c = errorCounts;
                     return [4 /*yield*/, getErrorCounts(doTsCheck, doLintCheck)];
-                case 6:
+                case 7:
                     _c.base = _d.sent();
                     (0,core.endGroup)();
                     failed = false;
@@ -8320,13 +8322,13 @@ function run(octokit, context, token) {
                     }) : '';
                     actionLink = '\n\n<a href="https://github.com/guardian/typescript-monitor-action"><sub>typescript-monitor-action</sub></a>';
                     summary = [tsSummary, lintSummary, actionLink].join('');
-                    if (!(context.eventName !== 'pull_request' && context.eventName !== 'pull_request_target')) return [3 /*break*/, 7];
+                    if (!(context.eventName !== 'pull_request' && context.eventName !== 'pull_request_target')) return [3 /*break*/, 8];
                     console.log('No PR associated with this action run. Not posting a check');
-                    return [3 /*break*/, 10];
-                case 7:
-                    if (!token) return [3 /*break*/, 10];
-                    return [4 /*yield*/, createCheck(octokit, context)];
+                    return [3 /*break*/, 11];
                 case 8:
+                    if (!token) return [3 /*break*/, 11];
+                    return [4 /*yield*/, createCheck(octokit, context)];
+                case 9:
                     finishCheck = _d.sent();
                     details = {
                         conclusion: failed ? 'failure' : 'success',
@@ -8336,10 +8338,10 @@ function run(octokit, context, token) {
                         }
                     };
                     return [4 /*yield*/, finishCheck(details)];
-                case 9:
-                    _d.sent();
-                    _d.label = 10;
                 case 10:
+                    _d.sent();
+                    _d.label = 11;
+                case 11:
                     addOrUpdateComment(octokit, context, summary);
                     return [2 /*return*/];
             }
