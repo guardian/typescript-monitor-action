@@ -8265,6 +8265,7 @@ function run(octokit, context, token) {
                         (0,core.setFailed)("More " + formattedErrorCheckNames.eslint + " errors were introduced");
                         failed = true;
                     }) : '') + "\n\t";
+                    console.log(summary);
                     if (!(context.eventName !== 'pull_request' && context.eventName !== 'pull_request_target')) return [3 /*break*/, 6];
                     console.log('No PR associated with this action run. Not posting a check or comment.');
                     return [3 /*break*/, 9];
@@ -8283,10 +8284,9 @@ function run(octokit, context, token) {
                     return [4 /*yield*/, finishCheck(details)];
                 case 8:
                     _d.sent();
-                    _d.label = 9;
-                case 9:
                     addOrUpdateComment(octokit, context, summary);
-                    return [2 /*return*/];
+                    _d.label = 9;
+                case 9: return [2 /*return*/];
             }
         });
     });

@@ -116,6 +116,7 @@ async function getInstallScript(): Promise<string> {
 }
 
 export default async function run(octokit: InstanceType<typeof GitHub>, context: Context, token: string) {
+	console.log(JSON.stringify(context));
 	const errorCounts: ErrorCountCollectionType = {
 		base: {
 			typescript: 0,
@@ -182,6 +183,8 @@ export default async function run(octokit: InstanceType<typeof GitHub>, context:
 		}
 	`
 	
+	console.log(summary);
+	
 	if (context.eventName !== 'pull_request' && context.eventName !== 'pull_request_target') {
 		console.log('No PR associated with this action run. Not posting a check or comment.');
 	}	else if (token) {
@@ -194,7 +197,6 @@ export default async function run(octokit: InstanceType<typeof GitHub>, context:
 			}
 		};
 		await finishCheck(details);
+		addOrUpdateComment(octokit, context, summary);	
 	}
-	
-	addOrUpdateComment(octokit, context, summary);	
 }
