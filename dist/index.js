@@ -7749,7 +7749,7 @@ function checkoutBaseBranch(baseRef, baseSha) {
 function getExistingComment(octokit, commentInfo) {
     var _a;
     return __awaiter(this, void 0, void 0, function () {
-        var comments, i, c, e_4;
+        var comments, i, c, error_1;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
@@ -7765,8 +7765,8 @@ function getExistingComment(octokit, commentInfo) {
                     }
                     return [3 /*break*/, 3];
                 case 2:
-                    e_4 = _b.sent();
-                    console.log('Error checking for previous comments: ' + e_4.message);
+                    error_1 = _b.sent();
+                    console.log('Error checking for previous comments', error_1);
                     return [3 /*break*/, 3];
                 case 3: return [2 /*return*/, null];
             }
@@ -7775,7 +7775,7 @@ function getExistingComment(octokit, commentInfo) {
 }
 function createNewComment(octokit, context, comment) {
     return __awaiter(this, void 0, void 0, function () {
-        var e_5, issue, e_6;
+        var error_2, issue, error_3;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -7788,8 +7788,8 @@ function createNewComment(octokit, context, comment) {
                     _a.sent();
                     return [3 /*break*/, 8];
                 case 3:
-                    e_5 = _a.sent();
-                    console.log("Error creating comment: " + e_5.message);
+                    error_2 = _a.sent();
+                    console.log('Error creating comment', error_2);
                     console.log("Submitting a PR review comment instead...");
                     _a.label = 4;
                 case 4:
@@ -7806,8 +7806,8 @@ function createNewComment(octokit, context, comment) {
                     _a.sent();
                     return [3 /*break*/, 7];
                 case 6:
-                    e_6 = _a.sent();
-                    console.log('Error creating PR review.');
+                    error_3 = _a.sent();
+                    console.log('Error creating PR review.', error_3);
                     return [3 /*break*/, 7];
                 case 7: return [3 /*break*/, 8];
                 case 8: return [2 /*return*/];
@@ -7817,7 +7817,7 @@ function createNewComment(octokit, context, comment) {
 }
 function updateExistingComment(octokit, context, commentId, comment) {
     return __awaiter(this, void 0, void 0, function () {
-        var e_7;
+        var error_4;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -7830,8 +7830,8 @@ function updateExistingComment(octokit, context, commentId, comment) {
                     _a.sent();
                     return [3 /*break*/, 4];
                 case 3:
-                    e_7 = _a.sent();
-                    console.log('Error editing previous comment: ' + e_7.message);
+                    error_4 = _a.sent();
+                    console.log('Error editing previous comment', error_4);
                     createNewComment(octokit, context, comment);
                     return [3 /*break*/, 4];
                 case 4: return [2 /*return*/];
@@ -7842,26 +7842,33 @@ function updateExistingComment(octokit, context, commentId, comment) {
 function addOrUpdateComment(octokit, context, commentBody) {
     var _a, _b;
     return __awaiter(this, void 0, void 0, function () {
-        var issue_number, associatedPRs, prToUpdate, commentInfo, comment, commentId;
+        var issue_number, associatedPRs, prToUpdate, error_5, commentInfo, comment, commentId;
         return __generator(this, function (_c) {
             switch (_c.label) {
                 case 0:
                     issue_number = (_a = context.issue) === null || _a === void 0 ? void 0 : _a.number;
-                    if (!(context.eventName == "push")) return [3 /*break*/, 2];
+                    if (!(context.eventName == "push")) return [3 /*break*/, 4];
+                    _c.label = 1;
+                case 1:
+                    _c.trys.push([1, 3, , 4]);
                     console.log('Push event, looking for PR associated with this commit');
                     return [4 /*yield*/, octokit.rest.repos.listPullRequestsAssociatedWithCommit(__assign(__assign({}, context.repo), { commit_sha: context.payload.after }))];
-                case 1:
+                case 2:
                     associatedPRs = (_c.sent()).data;
                     prToUpdate = associatedPRs.find(function (pr) { return pr.state === 'open'; });
+                    console.log("Commenting on PR number " + (prToUpdate === null || prToUpdate === void 0 ? void 0 : prToUpdate.id));
                     issue_number = (_b = prToUpdate === null || prToUpdate === void 0 ? void 0 : prToUpdate.id) !== null && _b !== void 0 ? _b : issue_number;
-                    _c.label = 2;
-                case 2:
-                    if (!issue_number) return [3 /*break*/, 4];
+                    return [3 /*break*/, 4];
+                case 3:
+                    error_5 = _c.sent();
+                    console.log('Error getting PR to comment on', error_5);
+                    return [3 /*break*/, 4];
+                case 4:
+                    if (!issue_number) return [3 /*break*/, 6];
                     commentInfo = __assign(__assign({}, context.repo), { issue_number: issue_number });
                     comment = __assign(__assign({}, commentInfo), { body: commentBody });
-                    (0,core.startGroup)("Updating monitor PR comment");
                     return [4 /*yield*/, getExistingComment(octokit, commentInfo)];
-                case 3:
+                case 5:
                     commentId = _c.sent();
                     if (commentId) {
                         updateExistingComment(octokit, context, commentId, comment);
@@ -7869,8 +7876,8 @@ function addOrUpdateComment(octokit, context, commentBody) {
                     else {
                         createNewComment(octokit, context, comment);
                     }
-                    _c.label = 4;
-                case 4:
+                    _c.label = 6;
+                case 6:
                     (0,core.endGroup)();
                     return [2 /*return*/];
             }
@@ -8227,7 +8234,6 @@ function run(octokit, context, token) {
         return src_generator(this, function (_d) {
             switch (_d.label) {
                 case 0:
-                    console.log(JSON.stringify(context));
                     errorCounts = {
                         base: {
                             typescript: 0,

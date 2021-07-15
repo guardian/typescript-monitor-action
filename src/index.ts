@@ -116,7 +116,6 @@ async function getInstallScript(): Promise<string> {
 }
 
 export default async function run(octokit: InstanceType<typeof GitHub>, context: Context, token: string) {
-	console.log(JSON.stringify(context));
 	const errorCounts: ErrorCountCollectionType = {
 		base: {
 			typescript: 0,

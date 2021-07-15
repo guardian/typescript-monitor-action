@@ -54,8 +54,8 @@ async function getExistingComment(octokit: InstanceType<typeof GitHub>, commentI
 				return c.id
 			}
 		}
-	}	catch (e) {
-		console.log('Error checking for previous comments: ' + e.message);
+	}	catch (error) {
+		console.log('Error checking for previous comments', error);
 	}
 	return null;
 }
@@ -64,8 +64,8 @@ async function createNewComment(octokit: InstanceType<typeof GitHub>, context: C
 	console.log('Creating new comment');
 	try {
 		await octokit.rest.issues.createComment(comment);
-	} catch (e) {
-		console.log(`Error creating comment: ${e.message}`);
+	} catch (error) {
+		console.log('Error creating comment', error);
 		console.log(`Submitting a PR review comment instead...`);
 		try {
 			const issue = context.issue;
@@ -76,8 +76,8 @@ async function createNewComment(octokit: InstanceType<typeof GitHub>, context: C
 				event: 'COMMENT',
 				body: comment.body
 			});
-		} catch (e) {
-			console.log('Error creating PR review.');
+		} catch (error) {
+			console.log('Error creating PR review.', error);
 		}
 	}
 }
@@ -90,8 +90,8 @@ async function updateExistingComment(octokit: InstanceType<typeof GitHub>, conte
 			comment_id: commentId,
 			body: comment.body
 		});
-	} catch (e) {
-		console.log('Error editing previous comment: ' + e.message);
+	} catch (error) {
+		console.log('Error editing previous comment', error);
 		createNewComment(octokit, context, comment)
 	}	
 }
@@ -100,16 +100,21 @@ export async function addOrUpdateComment(octokit: InstanceType<typeof GitHub>, c
 	let issue_number = context.issue?.number;
 	
 	if (context.eventName == "push") {
-		console.log('Push event, looking for PR associated with this commit');
-		const { data: associatedPRs } = await octokit.rest.repos.listPullRequestsAssociatedWithCommit(
-			{
-				...context.repo,
-				commit_sha: context.payload.after,
-			
-			}
-		)
-		const prToUpdate = associatedPRs.find(pr => pr.state === 'open');
-		issue_number = prToUpdate?.id ?? issue_number;
+		try {
+			console.log('Push event, looking for PR associated with this commit');
+			const { data: associatedPRs } = await octokit.rest.repos.listPullRequestsAssociatedWithCommit(
+				{
+					...context.repo,
+					commit_sha: context.payload.after,
+				
+				}
+			)
+			const prToUpdate = associatedPRs.find(pr => pr.state === 'open');
+			console.log(`Commenting on PR number ${prToUpdate?.id}`);
+			issue_number = prToUpdate?.id ?? issue_number;
+		} catch (error) {
+			console.log('Error getting PR to comment on', error)
+		}
 	}
 	
 	if (issue_number) {
@@ -122,8 +127,6 @@ export async function addOrUpdateComment(octokit: InstanceType<typeof GitHub>, c
 			...commentInfo,
 			body: commentBody,
 		}
-		
-		startGroup(`Updating monitor PR comment`);
 		const commentId = await getExistingComment(octokit, commentInfo);
 		
 		if (commentId) {
