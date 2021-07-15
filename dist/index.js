@@ -7630,6 +7630,17 @@ var external_path_default = /*#__PURE__*/__nccwpck_require__.n(external_path_);
 // EXTERNAL MODULE: ./node_modules/@actions/exec/lib/exec.js
 var exec = __nccwpck_require__(1514);
 ;// CONCATENATED MODULE: ./src/steps.ts
+var __assign = (undefined && undefined.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -7735,11 +7746,139 @@ function checkoutBaseBranch(baseRef, baseSha) {
         });
     });
 }
+function getExistingComment(octokit, commentInfo) {
+    var _a;
+    return __awaiter(this, void 0, void 0, function () {
+        var comments, i, c, e_4;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
+                case 0:
+                    _b.trys.push([0, 2, , 3]);
+                    return [4 /*yield*/, octokit.rest.issues.listComments(commentInfo)];
+                case 1:
+                    comments = (_b.sent()).data;
+                    for (i = comments.length; i--;) {
+                        c = comments[i];
+                        if (c.body && ((_a = c.user) === null || _a === void 0 ? void 0 : _a.type) === 'Bot' && /<sub>[\s\n]*typesript-monitor-action/.test(c.body)) {
+                            return [2 /*return*/, c.id];
+                        }
+                    }
+                    return [3 /*break*/, 3];
+                case 2:
+                    e_4 = _b.sent();
+                    console.log('Error checking for previous comments: ' + e_4.message);
+                    return [3 /*break*/, 3];
+                case 3: return [2 /*return*/, null];
+            }
+        });
+    });
+}
+function createNewComment(octokit, context, comment) {
+    return __awaiter(this, void 0, void 0, function () {
+        var e_5, issue, e_6;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    console.log('Creating new comment');
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 3, , 8]);
+                    return [4 /*yield*/, octokit.rest.issues.createComment(comment)];
+                case 2:
+                    _a.sent();
+                    return [3 /*break*/, 8];
+                case 3:
+                    e_5 = _a.sent();
+                    console.log("Error creating comment: " + e_5.message);
+                    console.log("Submitting a PR review comment instead...");
+                    _a.label = 4;
+                case 4:
+                    _a.trys.push([4, 6, , 7]);
+                    issue = context.issue;
+                    return [4 /*yield*/, octokit.rest.pulls.createReview({
+                            owner: issue.owner,
+                            repo: issue.repo,
+                            pull_number: issue.number,
+                            event: 'COMMENT',
+                            body: comment.body
+                        })];
+                case 5:
+                    _a.sent();
+                    return [3 /*break*/, 7];
+                case 6:
+                    e_6 = _a.sent();
+                    console.log('Error creating PR review.');
+                    return [3 /*break*/, 7];
+                case 7: return [3 /*break*/, 8];
+                case 8: return [2 /*return*/];
+            }
+        });
+    });
+}
+function updateExistingComment(octokit, context, commentId, comment) {
+    return __awaiter(this, void 0, void 0, function () {
+        var e_7;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    console.log("Updating previous comment #" + commentId);
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 3, , 4]);
+                    return [4 /*yield*/, octokit.rest.issues.updateComment(__assign(__assign({}, context.repo), { comment_id: commentId, body: comment.body }))];
+                case 2:
+                    _a.sent();
+                    return [3 /*break*/, 4];
+                case 3:
+                    e_7 = _a.sent();
+                    console.log('Error editing previous comment: ' + e_7.message);
+                    createNewComment(octokit, context, comment);
+                    return [3 /*break*/, 4];
+                case 4: return [2 /*return*/];
+            }
+        });
+    });
+}
+function addOrUpdateComment(octokit, context, commentBody) {
+    return __awaiter(this, void 0, void 0, function () {
+        var commentInfo, comment, commentId;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    commentInfo = __assign(__assign({}, context.repo), { issue_number: context.issue.number });
+                    comment = __assign(__assign({}, commentInfo), { body: commentBody });
+                    (0,core.startGroup)("Updating monitor PR comment");
+                    return [4 /*yield*/, getExistingComment(octokit, commentInfo)];
+                case 1:
+                    commentId = _a.sent();
+                    if (commentId) {
+                        updateExistingComment(octokit, context, commentId, comment);
+                    }
+                    else {
+                        createNewComment(octokit, context, comment);
+                    }
+                    (0,core.endGroup)();
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
 
 // EXTERNAL MODULE: external "fs"
 var external_fs_ = __nccwpck_require__(5747);
 var external_fs_default = /*#__PURE__*/__nccwpck_require__.n(external_fs_);
 ;// CONCATENATED MODULE: ./src/utils.ts
+var utils_assign = (undefined && undefined.__assign) || function () {
+    utils_assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return utils_assign.apply(this, arguments);
+};
 var utils_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -7837,6 +7976,52 @@ function execWithOutput(command, args) {
         });
     });
 }
+function getChangeEmoji(errorChange) {
+    if (errorChange > 10) {
+        return '😱';
+    }
+    else if (errorChange > 0) {
+        return '😰';
+    }
+    else if (errorChange < -10) {
+        return '🥳';
+    }
+    else if (errorChange < 0) {
+        return '😎';
+    }
+    return '😶';
+}
+function errorDiffLine(errorChange, checkType) {
+    var changeWord = errorChange > 0 ? 'increased' : 'decreased';
+    if (errorChange === 0) {
+        return checkType + " errors did not change " + getChangeEmoji(errorChange);
+    }
+    return checkType + " errors " + changeWord + " by " + Math.abs(errorChange) + " " + getChangeEmoji(errorChange) + "\n";
+}
+function createCheck(octokit, context) {
+    var _a;
+    return utils_awaiter(this, void 0, void 0, function () {
+        var check;
+        var _this = this;
+        return utils_generator(this, function (_b) {
+            switch (_b.label) {
+                case 0: return [4 /*yield*/, octokit.rest.checks.create(utils_assign(utils_assign({}, context.repo), { name: 'Typescript Monitor', head_sha: (_a = context === null || context === void 0 ? void 0 : context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.head.sha, status: 'in_progress' }))];
+                case 1:
+                    check = _b.sent();
+                    return [2 /*return*/, function (details) { return utils_awaiter(_this, void 0, void 0, function () {
+                            return utils_generator(this, function (_a) {
+                                switch (_a.label) {
+                                    case 0: return [4 /*yield*/, octokit.rest.checks.update(utils_assign(utils_assign(utils_assign({}, context.repo), { check_run_id: check.data.id, completed_at: new Date().toISOString(), status: 'completed' }), details))];
+                                    case 1:
+                                        _a.sent();
+                                        return [2 /*return*/];
+                                }
+                            });
+                        }); }];
+            }
+        });
+    });
+}
 
 ;// CONCATENATED MODULE: ./src/index.ts
 var src_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -7883,6 +8068,10 @@ var tsInput = 'check-typescript';
 var lintInput = 'check-linting';
 var tsScriptInput = 'ts-script';
 var lintScriptInput = 'lint-script';
+var formattedErrorCheckNames = {
+    typescript: 'TypeScript',
+    eslint: 'ESLint'
+};
 function getTypescriptErrorCount() {
     return src_awaiter(this, void 0, void 0, function () {
         var script, output, lines, errorAmount;
@@ -7969,6 +8158,13 @@ function getErrorCounts(doTs, doLint) {
         });
     });
 }
+function handleErrorCountChange(errorCounts, checkType, failureSideEffect) {
+    var errorCountChange = errorCounts.branch[checkType] - errorCounts.base[checkType];
+    if (errorCountChange > 0 && failureSideEffect) {
+        failureSideEffect();
+    }
+    return errorDiffLine(errorCountChange, formattedErrorCheckNames[checkType]);
+}
 function getBaseRef(context) {
     if (context.eventName == "push") {
         return {
@@ -8011,9 +8207,9 @@ function getInstallScript() {
         });
     });
 }
-function run(context) {
+function run(octokit, context, token) {
     return src_awaiter(this, void 0, void 0, function () {
-        var errorCounts, doTsCheck, doLintCheck, installScript, _a, baseSha, baseRef, _b, _c, tsErrorCountChange, lintErrorCountChange;
+        var errorCounts, doTsCheck, doLintCheck, installScript, _a, baseSha, baseRef, _b, _c, failed, summary, finishCheck, details;
         return src_generator(this, function (_d) {
             switch (_d.label) {
                 case 0:
@@ -8061,20 +8257,35 @@ function run(context) {
                 case 5:
                     _c.base = _d.sent();
                     (0,core.endGroup)();
-                    if (doTsCheck) {
-                        tsErrorCountChange = errorCounts.branch.typescript - errorCounts.base.typescript;
-                        if (tsErrorCountChange > 0) {
-                            (0,core.setFailed)('More TS errors were introduced');
+                    failed = false;
+                    summary = "\n\t\t" + (doTsCheck ? handleErrorCountChange(errorCounts, 'typescript', function () {
+                        (0,core.setFailed)("More " + formattedErrorCheckNames.typescript + " errors were introduced");
+                        failed = true;
+                    }) : '') + "\n\t\t" + (doLintCheck ? handleErrorCountChange(errorCounts, 'eslint', function () {
+                        (0,core.setFailed)("More " + formattedErrorCheckNames.eslint + " errors were introduced");
+                        failed = true;
+                    }) : '') + "\n\t";
+                    if (!(context.eventName !== 'pull_request' && context.eventName !== 'pull_request_target')) return [3 /*break*/, 6];
+                    console.log('No PR associated with this action run. Not posting a check or comment.');
+                    return [3 /*break*/, 9];
+                case 6:
+                    if (!token) return [3 /*break*/, 9];
+                    return [4 /*yield*/, createCheck(octokit, context)];
+                case 7:
+                    finishCheck = _d.sent();
+                    details = {
+                        conclusion: failed ? 'failure' : 'success',
+                        output: {
+                            title: 'Typescript Monitor',
+                            summary: summary,
                         }
-                        console.log("Change in TS errors: " + tsErrorCountChange);
-                    }
-                    if (doLintCheck) {
-                        lintErrorCountChange = errorCounts.branch.eslint - errorCounts.base.eslint;
-                        if (lintErrorCountChange > 0) {
-                            (0,core.setFailed)('More lint errors were introduced');
-                        }
-                        console.log("Change in lint errors: " + lintErrorCountChange);
-                    }
+                    };
+                    return [4 /*yield*/, finishCheck(details)];
+                case 8:
+                    _d.sent();
+                    _d.label = 9;
+                case 9:
+                    addOrUpdateComment(octokit, context, summary);
                     return [2 /*return*/];
             }
         });
@@ -8121,19 +8332,17 @@ var index_generator = (undefined && undefined.__generator) || function (thisArg,
 
 
 
-// const tokenInput = 'repo-token';
+var tokenInput = 'repo-token';
 (function () { return index_awaiter(void 0, void 0, void 0, function () {
-    var e_1;
+    var token, octokit, e_1;
     return index_generator(this, function (_a) {
         switch (_a.label) {
             case 0:
                 _a.trys.push([0, 2, , 3]);
-                // const token = getInput(tokenInput);
-                // const octokit = getOctokit(token);
-                return [4 /*yield*/, run(github.context)];
+                token = (0,core.getInput)(tokenInput);
+                octokit = (0,github.getOctokit)(token);
+                return [4 /*yield*/, run(octokit, github.context, token)];
             case 1:
-                // const token = getInput(tokenInput);
-                // const octokit = getOctokit(token);
                 _a.sent();
                 return [3 /*break*/, 3];
             case 2:

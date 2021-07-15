@@ -1,17 +1,29 @@
 import path from 'path';
 import { getInput, setFailed, startGroup, endGroup, debug } from '@actions/core';
 import { Context } from '@actions/github/lib/context';
-import { installStep, checkoutBaseBranch } from "./steps";
-import { execWithOutput, safeAccess, stringToBool } from "./utils";
+import { GitHub } from "@actions/github/lib/utils";
+import { installStep, checkoutBaseBranch, addOrUpdateComment } from "./steps";
+import { createCheck, errorDiffLine, execWithOutput, safeAccess, stringToBool } from "./utils";
 
 const tsInput = 'check-typescript';
 const lintInput = 'check-linting';
 const tsScriptInput = 'ts-script';
 const lintScriptInput = 'lint-script';
 
+type ErrorCheckType = 'typescript' | 'eslint';
+
 type BranchErrorCountType = {
-	typescript: number;
-	eslint: number;
+	[key in ErrorCheckType]: number;
+}
+
+type ErrorCountCollectionType = {
+	base: BranchErrorCountType;
+	branch: BranchErrorCountType;
+};
+
+const formattedErrorCheckNames: { [key in ErrorCheckType]: string } = {
+	typescript: 'TypeScript',
+	eslint: 'ESLint'
 }
 
 async function getTypescriptErrorCount(): Promise<number> {
@@ -59,6 +71,17 @@ async function getErrorCounts(doTs: boolean, doLint: boolean): Promise<BranchErr
 	}
 }
 
+function handleErrorCountChange(
+	errorCounts: ErrorCountCollectionType,
+	checkType: ErrorCheckType,
+	failureSideEffect?: () => void) {
+	const errorCountChange = errorCounts.branch[checkType] - errorCounts.base[checkType];
+	if (errorCountChange > 0 && failureSideEffect) {
+		failureSideEffect();
+	}
+	return errorDiffLine(errorCountChange, formattedErrorCheckNames[checkType]);
+}
+
 function getBaseRef(context: Context): { baseSha?: string, baseRef?: string } {
 	if (context.eventName == "push") {
 		return {
@@ -92,8 +115,8 @@ async function getInstallScript(): Promise<string> {
 	throw new Error('Could not detect the project\'s package manager');
 }
 
-export default async function run(context: Context) {
-	const errorCounts: Record<string, BranchErrorCountType> = {
+export default async function run(octokit: InstanceType<typeof GitHub>, context: Context, token: string) {
+	const errorCounts: ErrorCountCollectionType = {
 		base: {
 			typescript: 0,
 			eslint: 0,
@@ -134,19 +157,44 @@ export default async function run(context: Context) {
 	errorCounts.base = await getErrorCounts(doTsCheck, doLintCheck);
 	endGroup();
 	
-	if (doTsCheck) {
-		const tsErrorCountChange = errorCounts.branch.typescript - errorCounts.base.typescript;
-		if (tsErrorCountChange > 0) {
-			setFailed('More TS errors were introduced');
+	let failed = false;
+	
+	const summary = `
+		${
+			doTsCheck ? handleErrorCountChange(
+				errorCounts,
+				'typescript',
+				() => {
+					setFailed(`More ${formattedErrorCheckNames.typescript} errors were introduced`);
+					failed = true;
+				},
+			) : ''
 		}
-		console.log(`Change in TS errors: ${tsErrorCountChange}`);
+		${
+			doLintCheck ? handleErrorCountChange(
+				errorCounts,
+				'eslint',
+				() => {
+					setFailed(`More ${formattedErrorCheckNames.eslint} errors were introduced`);
+					failed = true;
+				},
+			) : ''
+		}
+	`
+	
+	if (context.eventName !== 'pull_request' && context.eventName !== 'pull_request_target') {
+		console.log('No PR associated with this action run. Not posting a check or comment.');
+	}	else if (token) {
+		const finishCheck = await createCheck(octokit, context);
+		const details = {
+			conclusion: failed ? 'failure': 'success',
+			output: {
+				title: 'Typescript Monitor',
+				summary,
+			}
+		};
+		await finishCheck(details);
 	}
 	
-	if (doLintCheck) {
-		const lintErrorCountChange = errorCounts.branch.eslint - errorCounts.base.eslint;
-		if (lintErrorCountChange > 0) {
-			setFailed('More lint errors were introduced');
-		}
-		console.log(`Change in lint errors: ${lintErrorCountChange}`);
-	}
+	addOrUpdateComment(octokit, context, summary);	
 }
