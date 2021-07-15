@@ -186,7 +186,7 @@ export default async function run(octokit: InstanceType<typeof GitHub>, context:
 	console.log(summary);
 	
 	if (context.eventName !== 'pull_request' && context.eventName !== 'pull_request_target') {
-		console.log('No PR associated with this action run. Not posting a check or comment.');
+		console.log('No PR associated with this action run. Not posting a check');
 	}	else if (token) {
 		const finishCheck = await createCheck(octokit, context);
 		const details = {
@@ -197,6 +197,6 @@ export default async function run(octokit: InstanceType<typeof GitHub>, context:
 			}
 		};
 		await finishCheck(details);
-		addOrUpdateComment(octokit, context, summary);	
 	}
+	addOrUpdateComment(octokit, context, summary);
 }

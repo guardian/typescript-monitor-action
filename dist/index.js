@@ -7840,23 +7840,37 @@ function updateExistingComment(octokit, context, commentId, comment) {
     });
 }
 function addOrUpdateComment(octokit, context, commentBody) {
+    var _a, _b;
     return __awaiter(this, void 0, void 0, function () {
-        var commentInfo, comment, commentId;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
+        var issue_number, associatedPRs, prToUpdate, commentInfo, comment, commentId;
+        return __generator(this, function (_c) {
+            switch (_c.label) {
                 case 0:
-                    commentInfo = __assign(__assign({}, context.repo), { issue_number: context.issue.number });
+                    issue_number = (_a = context.issue) === null || _a === void 0 ? void 0 : _a.number;
+                    if (!(context.eventName == "push")) return [3 /*break*/, 2];
+                    console.log('Push event, looking for PR associated with this commit');
+                    return [4 /*yield*/, octokit.rest.repos.listPullRequestsAssociatedWithCommit(__assign(__assign({}, context.repo), { commit_sha: context.payload.after }))];
+                case 1:
+                    associatedPRs = (_c.sent()).data;
+                    prToUpdate = associatedPRs.find(function (pr) { return pr.state === 'open'; });
+                    issue_number = (_b = prToUpdate === null || prToUpdate === void 0 ? void 0 : prToUpdate.id) !== null && _b !== void 0 ? _b : issue_number;
+                    _c.label = 2;
+                case 2:
+                    if (!issue_number) return [3 /*break*/, 4];
+                    commentInfo = __assign(__assign({}, context.repo), { issue_number: issue_number });
                     comment = __assign(__assign({}, commentInfo), { body: commentBody });
                     (0,core.startGroup)("Updating monitor PR comment");
                     return [4 /*yield*/, getExistingComment(octokit, commentInfo)];
-                case 1:
-                    commentId = _a.sent();
+                case 3:
+                    commentId = _c.sent();
                     if (commentId) {
                         updateExistingComment(octokit, context, commentId, comment);
                     }
                     else {
                         createNewComment(octokit, context, comment);
                     }
+                    _c.label = 4;
+                case 4:
                     (0,core.endGroup)();
                     return [2 /*return*/];
             }
@@ -8268,7 +8282,7 @@ function run(octokit, context, token) {
                     }) : '') + "\n\t";
                     console.log(summary);
                     if (!(context.eventName !== 'pull_request' && context.eventName !== 'pull_request_target')) return [3 /*break*/, 6];
-                    console.log('No PR associated with this action run. Not posting a check or comment.');
+                    console.log('No PR associated with this action run. Not posting a check');
                     return [3 /*break*/, 9];
                 case 6:
                     if (!token) return [3 /*break*/, 9];
@@ -8285,9 +8299,10 @@ function run(octokit, context, token) {
                     return [4 /*yield*/, finishCheck(details)];
                 case 8:
                     _d.sent();
-                    addOrUpdateComment(octokit, context, summary);
                     _d.label = 9;
-                case 9: return [2 /*return*/];
+                case 9:
+                    addOrUpdateComment(octokit, context, summary);
+                    return [2 /*return*/];
             }
         });
     });

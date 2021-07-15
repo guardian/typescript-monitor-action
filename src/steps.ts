@@ -97,23 +97,40 @@ async function updateExistingComment(octokit: InstanceType<typeof GitHub>, conte
 }
 
 export async function addOrUpdateComment(octokit: InstanceType<typeof GitHub>, context: Context, commentBody: string) {
-	const commentInfo = {
-		...context.repo,
-		issue_number: context.issue.number,
+	let issue_number = context.issue?.number;
+	
+	if (context.eventName == "push") {
+		console.log('Push event, looking for PR associated with this commit');
+		const { data: associatedPRs } = await octokit.rest.repos.listPullRequestsAssociatedWithCommit(
+			{
+				...context.repo,
+				commit_sha: context.payload.after,
+			
+			}
+		)
+		const prToUpdate = associatedPRs.find(pr => pr.state === 'open');
+		issue_number = prToUpdate?.id ?? issue_number;
 	}
 	
-	const comment = {
-		...commentInfo,
-		body: commentBody,
-	}
-	
-	startGroup(`Updating monitor PR comment`);
-	const commentId = await getExistingComment(octokit, commentInfo);
-	
-	if (commentId) {
-		updateExistingComment(octokit, context, commentId, comment);
-	} else {
-		createNewComment(octokit, context, comment);
+	if (issue_number) {
+		const commentInfo = {
+			...context.repo,
+			issue_number,
+		}
+		
+		const comment = {
+			...commentInfo,
+			body: commentBody,
+		}
+		
+		startGroup(`Updating monitor PR comment`);
+		const commentId = await getExistingComment(octokit, commentInfo);
+		
+		if (commentId) {
+			updateExistingComment(octokit, context, commentId, comment);
+		} else {
+			createNewComment(octokit, context, comment);
+		}
 	}
 	endGroup();
 }
