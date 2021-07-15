@@ -2,6 +2,7 @@ import { startGroup, endGroup } from '@actions/core';
 import { exec } from '@actions/exec';
 import { Context } from '@actions/github/lib/context';
 import { GitHub } from "@actions/github/lib/utils";
+import { getAssociatedPR } from "./utils";
 
 type ComparisonBranchType = 'current' | 'base';
 
@@ -50,7 +51,7 @@ async function getExistingComment(octokit: InstanceType<typeof GitHub>, commentI
 		const comments = (await octokit.rest.issues.listComments(commentInfo)).data;
 		for (let i = comments.length; i--;) {
 			const c = comments[i];
-			if (c.body && c.user?.type === 'Bot' && /<sub>[\s\n]*typesript-monitor-action/.test(c.body)) {
+			if (c.body && c.user?.type === 'Bot') {
 				return c.id
 			}
 		}
@@ -99,22 +100,10 @@ async function updateExistingComment(octokit: InstanceType<typeof GitHub>, conte
 export async function addOrUpdateComment(octokit: InstanceType<typeof GitHub>, context: Context, commentBody: string) {
 	let issue_number = context.issue?.number;
 	
-	if (context.eventName == "push") {
-		try {
-			console.log('Push event, looking for PR associated with this commit');
-			const { data: associatedPRs } = await octokit.rest.repos.listPullRequestsAssociatedWithCommit(
-				{
-					...context.repo,
-					commit_sha: context.payload.after,
-				
-				}
-			)
-			const prToUpdate = associatedPRs.find(pr => pr.state === 'open');
-			console.log(`Commenting on PR number ${prToUpdate?.id}`);
-			issue_number = prToUpdate?.number ?? issue_number;
-		} catch (error) {
-			console.log('Error getting PR to comment on', error)
-		}
+	if (context.eventName === "push") {
+		console.log('Push event, looking for PR associated with this commit');
+		const prToUpdate = await getAssociatedPR(octokit, context);
+		issue_number = prToUpdate?.number ?? issue_number;
 	}
 	
 	if (issue_number) {

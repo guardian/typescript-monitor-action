@@ -3,7 +3,7 @@ import { getInput, setFailed, startGroup, endGroup, debug } from '@actions/core'
 import { Context } from '@actions/github/lib/context';
 import { GitHub } from "@actions/github/lib/utils";
 import { installStep, checkoutBaseBranch, addOrUpdateComment } from "./steps";
-import { createCheck, errorDiffLine, execWithOutput, safeAccess, stringToBool } from "./utils";
+import { createCheck, errorDiffLine, execWithOutput, getAssociatedPR, safeAccess, stringToBool } from "./utils";
 
 const tsInput = 'check-typescript';
 const lintInput = 'check-linting';
@@ -82,11 +82,12 @@ function handleErrorCountChange(
 	return errorDiffLine(errorCountChange, formattedErrorCheckNames[checkType]);
 }
 
-function getBaseRef(context: Context): { baseSha?: string, baseRef?: string } {
+async function getBaseRef(octokit: InstanceType<typeof GitHub>, context: Context): Promise<{ baseSha?: string, baseRef?: string }> {
 	if (context.eventName == "push") {
+		const prToCheck = await getAssociatedPR(octokit, context);
 		return {
-			baseSha: context.payload.before,
-			baseRef: context.payload.ref,
+			baseSha: prToCheck?.base.sha,
+			baseRef: prToCheck?.base.ref,
 		}
 	} else if (context.eventName == "pull_request" || context.eventName == 'pull_request_target') {
 		const pr = context.payload.pull_request;
@@ -139,7 +140,12 @@ export default async function run(octokit: InstanceType<typeof GitHub>, context:
 		debug('pr' + JSON.stringify(context.payload, null, 2));
 	} catch (e) { }
 
-	const { baseSha, baseRef } = getBaseRef(context);
+	const { baseSha, baseRef } = await getBaseRef(octokit, context);
+	
+	if (!baseSha && !baseRef) {
+		console.log('Could not find base branch, cancelling workflow');
+		return;
+	}
 	
 	await installStep('current', installScript);
 
@@ -159,19 +165,16 @@ export default async function run(octokit: InstanceType<typeof GitHub>, context:
 	
 	let failed = false;
 	
-	const summary = `
-		${
-			doTsCheck ? handleErrorCountChange(
-				errorCounts,
-				'typescript',
-				() => {
-					setFailed(`More ${formattedErrorCheckNames.typescript} errors were introduced`);
-					failed = true;
-				},
-			) : ''
-		}
-		${
-			doLintCheck ? handleErrorCountChange(
+	const tsSummary = doTsCheck ? handleErrorCountChange(
+		errorCounts,
+		'typescript',
+		() => {
+			setFailed(`More ${formattedErrorCheckNames.typescript} errors were introduced`);
+			failed = true;
+		},
+	) : '';
+	
+	const lintSummary = doLintCheck ? handleErrorCountChange(
 				errorCounts,
 				'eslint',
 				() => {
@@ -179,10 +182,10 @@ export default async function run(octokit: InstanceType<typeof GitHub>, context:
 					failed = true;
 				},
 			) : ''
-		}
-	`
 	
-	console.log(summary);
+	const actionLink = '\n\n<a href="https://github.com/preactjs/compressed-size-action"><sub>compressed-size-action</sub></a>'
+	
+	const summary = [tsSummary, lintSummary, actionLink].join('');
 	
 	if (context.eventName !== 'pull_request' && context.eventName !== 'pull_request_target') {
 		console.log('No PR associated with this action run. Not posting a check');
