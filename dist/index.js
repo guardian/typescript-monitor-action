@@ -7953,8 +7953,7 @@ function getExistingComment(octokit, commentInfo) {
                     comments = (_b.sent()).data;
                     existingComment = comments.find(function (comment) {
                         var _a;
-                        console.log(comment.body);
-                        if (comment.body && ((_a = comment.user) === null || _a === void 0 ? void 0 : _a.type) === 'Bot' && /typesript-monitor-action/gm.test(comment.body)) {
+                        if (comment.body && ((_a = comment.user) === null || _a === void 0 ? void 0 : _a.type) === 'Bot' && /typescript-monitor-action/gm.test(comment.body)) {
                             return comment.id;
                         }
                     });
