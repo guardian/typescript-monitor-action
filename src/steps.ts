@@ -49,12 +49,12 @@ type CommentType = CommentInfoType & {
 async function getExistingComment(octokit: InstanceType<typeof GitHub>, commentInfo: CommentInfoType): Promise<number | null> {
 	try {
 		const comments = (await octokit.rest.issues.listComments(commentInfo)).data;
-		for (let i = comments.length; i--;) {
-			const c = comments[i];
-			if (c.body && c.user?.type === 'Bot' && /<sub>[\s\n]*typesript-monitor-action/.test(c.body)) {
-				return c.id
+		const existingComment =  comments.find(comment => {
+			if (comment.body && comment.user?.type === 'Bot' && /typesript-monitor-action/gm.test(comment.body)) {
+				return comment.id
 			}
-		}
+		});
+		return existingComment?.id ?? null;
 	}	catch (error) {
 		console.log('Error checking for previous comments', error);
 	}

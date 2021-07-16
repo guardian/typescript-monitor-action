@@ -7929,7 +7929,7 @@ function checkoutBaseBranch(baseRef, baseSha) {
 function getExistingComment(octokit, commentInfo) {
     var _a;
     return steps_awaiter(this, void 0, void 0, function () {
-        var comments, i, c, error_1;
+        var comments, existingComment, error_1;
         return steps_generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
@@ -7937,13 +7937,13 @@ function getExistingComment(octokit, commentInfo) {
                     return [4 /*yield*/, octokit.rest.issues.listComments(commentInfo)];
                 case 1:
                     comments = (_b.sent()).data;
-                    for (i = comments.length; i--;) {
-                        c = comments[i];
-                        if (c.body && ((_a = c.user) === null || _a === void 0 ? void 0 : _a.type) === 'Bot' && /<sub>[\s\n]*typesript-monitor-action/.test(c.body)) {
-                            return [2 /*return*/, c.id];
+                    existingComment = comments.find(function (comment) {
+                        var _a;
+                        if (comment.body && ((_a = comment.user) === null || _a === void 0 ? void 0 : _a.type) === 'Bot' && /typesript-monitor-action/gm.test(comment.body)) {
+                            return comment.id;
                         }
-                    }
-                    return [3 /*break*/, 3];
+                    });
+                    return [2 /*return*/, (_a = existingComment === null || existingComment === void 0 ? void 0 : existingComment.id) !== null && _a !== void 0 ? _a : null];
                 case 2:
                     error_1 = _b.sent();
                     console.log('Error checking for previous comments', error_1);
