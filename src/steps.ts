@@ -33,6 +33,13 @@ export async function checkoutBaseBranch(baseRef?: string, baseSha?: string) {
 			}
 		}
 	}
+	try {
+		if (!baseRef) throw Error('missing context.payload.base.ref');
+		await exec(`git reset --hard ${baseRef}`);
+	}
+	catch (e) {
+		await exec(`git reset --hard ${baseSha}`);
+	}
 	endGroup();
 }
 

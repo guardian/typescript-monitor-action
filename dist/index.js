@@ -7877,7 +7877,7 @@ function installStep(branch, installScript) {
 }
 function checkoutBaseBranch(baseRef, baseSha) {
     return steps_awaiter(this, void 0, void 0, function () {
-        var e_1, e_2, e_3;
+        var e_1, e_2, e_3, e_4;
         return steps_generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -7920,6 +7920,20 @@ function checkoutBaseBranch(baseRef, baseSha) {
                 case 10: return [3 /*break*/, 11];
                 case 11: return [3 /*break*/, 12];
                 case 12:
+                    _a.trys.push([12, 14, , 16]);
+                    if (!baseRef)
+                        throw Error('missing context.payload.base.ref');
+                    return [4 /*yield*/, (0,exec.exec)("git reset --hard " + baseRef)];
+                case 13:
+                    _a.sent();
+                    return [3 /*break*/, 16];
+                case 14:
+                    e_4 = _a.sent();
+                    return [4 /*yield*/, (0,exec.exec)("git reset --hard " + baseSha)];
+                case 15:
+                    _a.sent();
+                    return [3 /*break*/, 16];
+                case 16:
                     (0,core.endGroup)();
                     return [2 /*return*/];
             }
