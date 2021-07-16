@@ -7759,7 +7759,7 @@ function getChangeEmoji(errorChange) {
 function errorDiffLine(errorChange, checkType) {
     var changeWord = errorChange > 0 ? 'increased' : 'decreased';
     if (errorChange === 0) {
-        return checkType + " errors did not change " + getChangeEmoji(errorChange) + "\n";
+        return "There was no change in the number of " + checkType + " errors " + getChangeEmoji(errorChange) + "\n";
     }
     return checkType + " errors " + changeWord + " by " + Math.abs(errorChange) + " " + getChangeEmoji(errorChange) + "\n";
 }
@@ -7953,9 +7953,7 @@ function getExistingComment(octokit, commentInfo) {
                     comments = (_b.sent()).data;
                     existingComment = comments.find(function (comment) {
                         var _a;
-                        if (comment.body && ((_a = comment.user) === null || _a === void 0 ? void 0 : _a.type) === 'Bot' && /typescript-monitor-action/gm.test(comment.body)) {
-                            return comment.id;
-                        }
+                        return comment.body && ((_a = comment.user) === null || _a === void 0 ? void 0 : _a.type) === 'Bot' && /typescript-monitor-action/gm.test(comment.body);
                     });
                     return [2 /*return*/, (_a = existingComment === null || existingComment === void 0 ? void 0 : existingComment.id) !== null && _a !== void 0 ? _a : null];
                 case 2:

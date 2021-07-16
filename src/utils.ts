@@ -56,7 +56,7 @@ function getChangeEmoji(errorChange: number) {
 export function errorDiffLine(errorChange: number, checkType: string): string {
 	const changeWord = errorChange > 0 ? 'increased' : 'decreased';
 	if (errorChange === 0) {
-		return `${checkType} errors did not change ${getChangeEmoji(errorChange)}\n`;
+		return `There was no change in the number of ${checkType} errors ${getChangeEmoji(errorChange)}\n`;
 	}
 	return `${checkType} errors ${changeWord} by ${Math.abs(errorChange)} ${getChangeEmoji(errorChange)}\n`;
 }
