@@ -66,7 +66,7 @@ jobs:
           uses: guardian/typescript-monitor-action@main
           with:
             repo-token: '${{ secrets.GITHUB_TOKEN }}'
-            cdw: './client'
+            cwd: './client'
             ts-script: 'yarn tsc --allowJs --noEmit'
             lint-script: 'yarn lint:check'
 ```
