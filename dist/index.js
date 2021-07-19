@@ -7629,10 +7629,7 @@ var external_path_ = __nccwpck_require__(5622);
 var external_path_default = /*#__PURE__*/__nccwpck_require__.n(external_path_);
 // EXTERNAL MODULE: ./node_modules/@actions/exec/lib/exec.js
 var exec = __nccwpck_require__(1514);
-// EXTERNAL MODULE: external "fs"
-var external_fs_ = __nccwpck_require__(5747);
-var external_fs_default = /*#__PURE__*/__nccwpck_require__.n(external_fs_);
-;// CONCATENATED MODULE: ./src/utils.ts
+;// CONCATENATED MODULE: ./src/steps.ts
 var __assign = (undefined && undefined.__assign) || function () {
     __assign = Object.assign || function(t) {
         for (var s, i = 1, n = arguments.length; i < n; i++) {
@@ -7682,186 +7679,9 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 };
 
 
-function stringToBool(booleanString) {
-    if (booleanString === 'true') {
-        return true;
-    }
-    return false;
-}
-function safeAccess(filePath) {
-    return __awaiter(this, void 0, void 0, function () {
-        var e_1;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    _a.trys.push([0, 2, , 3]);
-                    return [4 /*yield*/, external_fs_default().promises.access(filePath, (external_fs_default()).constants.F_OK)];
-                case 1:
-                    _a.sent();
-                    return [2 /*return*/, true];
-                case 2:
-                    e_1 = _a.sent();
-                    return [3 /*break*/, 3];
-                case 3: return [2 /*return*/, false];
-            }
-        });
-    });
-}
-function execWithOutput(command, args) {
-    if (args === void 0) { args = []; }
-    return __awaiter(this, void 0, void 0, function () {
-        var output, options, error_1;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    output = '';
-                    options = {
-                        silent: true,
-                        listeners: {
-                            stdout: function (data) {
-                                output += data.toString();
-                            },
-                            stderr: function (data) {
-                                output += data.toString();
-                            }
-                        },
-                    };
-                    _a.label = 1;
-                case 1:
-                    _a.trys.push([1, 3, , 4]);
-                    return [4 /*yield*/, (0,exec.exec)(command, args, options)];
-                case 2:
-                    _a.sent();
-                    return [3 /*break*/, 4];
-                case 3:
-                    error_1 = _a.sent();
-                    return [3 /*break*/, 4];
-                case 4: return [2 /*return*/, output];
-            }
-        });
-    });
-}
-function getChangeEmoji(errorChange) {
-    if (errorChange > 10) {
-        return '😱';
-    }
-    else if (errorChange > 0) {
-        return '😰';
-    }
-    else if (errorChange < -10) {
-        return '🥳';
-    }
-    else if (errorChange < 0) {
-        return '😎';
-    }
-    return '😶';
-}
-function errorDiffLine(errorChange, checkType) {
-    var changeWord = errorChange > 0 ? 'increased' : 'decreased';
-    if (errorChange === 0) {
-        return "There was no change in the number of " + checkType + " errors " + getChangeEmoji(errorChange) + "\n";
-    }
-    return checkType + " errors " + changeWord + " by " + Math.abs(errorChange) + " " + getChangeEmoji(errorChange) + "\n";
-}
-function createCheck(octokit, context) {
-    var _a;
-    return __awaiter(this, void 0, void 0, function () {
-        var check;
-        var _this = this;
-        return __generator(this, function (_b) {
-            switch (_b.label) {
-                case 0: return [4 /*yield*/, octokit.rest.checks.create(__assign(__assign({}, context.repo), { name: 'Typescript Monitor', head_sha: (_a = context === null || context === void 0 ? void 0 : context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.head.sha, status: 'in_progress' }))];
-                case 1:
-                    check = _b.sent();
-                    return [2 /*return*/, function (details) { return __awaiter(_this, void 0, void 0, function () {
-                            return __generator(this, function (_a) {
-                                switch (_a.label) {
-                                    case 0: return [4 /*yield*/, octokit.rest.checks.update(__assign(__assign(__assign({}, context.repo), { check_run_id: check.data.id, completed_at: new Date().toISOString(), status: 'completed' }), details))];
-                                    case 1:
-                                        _a.sent();
-                                        return [2 /*return*/];
-                                }
-                            });
-                        }); }];
-            }
-        });
-    });
-}
-function getAssociatedPR(octokit, context) {
-    return __awaiter(this, void 0, void 0, function () {
-        var associatedPRs, error_2;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    _a.trys.push([0, 2, , 3]);
-                    return [4 /*yield*/, octokit.rest.repos.listPullRequestsAssociatedWithCommit(__assign(__assign({}, context.repo), { commit_sha: context.payload.after }))];
-                case 1:
-                    associatedPRs = (_a.sent()).data;
-                    return [2 /*return*/, associatedPRs.find(function (pr) { return pr.state === 'open'; })];
-                case 2:
-                    error_2 = _a.sent();
-                    console.log('Error getting PR associated with this commit', error_2);
-                    return [3 /*break*/, 3];
-                case 3: return [2 /*return*/];
-            }
-        });
-    });
-}
-
-;// CONCATENATED MODULE: ./src/steps.ts
-var steps_assign = (undefined && undefined.__assign) || function () {
-    steps_assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return steps_assign.apply(this, arguments);
-};
-var steps_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var steps_generator = (undefined && undefined.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
-
-
-
 function installStep(branch, installScript) {
-    return steps_awaiter(this, void 0, void 0, function () {
-        return steps_generator(this, function (_a) {
+    return __awaiter(this, void 0, void 0, function () {
+        return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     (0,core.startGroup)("[" + branch + "] Install Dependencies");
@@ -7876,9 +7696,9 @@ function installStep(branch, installScript) {
     });
 }
 function checkoutBaseBranch(baseRef, baseSha) {
-    return steps_awaiter(this, void 0, void 0, function () {
+    return __awaiter(this, void 0, void 0, function () {
         var e_1, e_2, e_3, e_4;
-        return steps_generator(this, function (_a) {
+        return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     (0,core.startGroup)("[base] Checkout target branch");
@@ -7942,9 +7762,9 @@ function checkoutBaseBranch(baseRef, baseSha) {
 }
 function getExistingComment(octokit, commentInfo) {
     var _a;
-    return steps_awaiter(this, void 0, void 0, function () {
+    return __awaiter(this, void 0, void 0, function () {
         var comments, existingComment, error_1;
-        return steps_generator(this, function (_b) {
+        return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
                     _b.trys.push([0, 2, , 3]);
@@ -7966,9 +7786,9 @@ function getExistingComment(octokit, commentInfo) {
     });
 }
 function createNewComment(octokit, context, comment) {
-    return steps_awaiter(this, void 0, void 0, function () {
+    return __awaiter(this, void 0, void 0, function () {
         var error_2, issue, error_3;
-        return steps_generator(this, function (_a) {
+        return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     console.log('Creating new comment');
@@ -8008,16 +7828,16 @@ function createNewComment(octokit, context, comment) {
     });
 }
 function updateExistingComment(octokit, context, commentId, comment) {
-    return steps_awaiter(this, void 0, void 0, function () {
+    return __awaiter(this, void 0, void 0, function () {
         var error_4;
-        return steps_generator(this, function (_a) {
+        return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     console.log("Updating previous comment #" + commentId);
                     _a.label = 1;
                 case 1:
                     _a.trys.push([1, 3, , 4]);
-                    return [4 /*yield*/, octokit.rest.issues.updateComment(steps_assign(steps_assign({}, context.repo), { comment_id: commentId, body: comment.body }))];
+                    return [4 /*yield*/, octokit.rest.issues.updateComment(__assign(__assign({}, context.repo), { comment_id: commentId, body: comment.body }))];
                 case 2:
                     _a.sent();
                     return [3 /*break*/, 4];
@@ -8032,37 +7852,188 @@ function updateExistingComment(octokit, context, commentId, comment) {
     });
 }
 function addOrUpdateComment(octokit, context, commentBody) {
-    var _a, _b;
-    return steps_awaiter(this, void 0, void 0, function () {
-        var issue_number, prToUpdate, commentInfo, comment, commentId;
-        return steps_generator(this, function (_c) {
-            switch (_c.label) {
+    var _a;
+    return __awaiter(this, void 0, void 0, function () {
+        var issue_number, commentInfo, comment, commentId;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
                 case 0:
                     issue_number = (_a = context.issue) === null || _a === void 0 ? void 0 : _a.number;
-                    if (!(context.eventName === "push")) return [3 /*break*/, 2];
-                    console.log('Push event, looking for PR associated with this commit');
-                    return [4 /*yield*/, getAssociatedPR(octokit, context)];
-                case 1:
-                    prToUpdate = _c.sent();
-                    issue_number = (_b = prToUpdate === null || prToUpdate === void 0 ? void 0 : prToUpdate.number) !== null && _b !== void 0 ? _b : issue_number;
-                    _c.label = 2;
-                case 2:
-                    if (!issue_number) return [3 /*break*/, 4];
-                    commentInfo = steps_assign(steps_assign({}, context.repo), { issue_number: issue_number });
-                    comment = steps_assign(steps_assign({}, commentInfo), { body: commentBody });
+                    if (!issue_number) return [3 /*break*/, 2];
+                    commentInfo = __assign(__assign({}, context.repo), { issue_number: issue_number });
+                    comment = __assign(__assign({}, commentInfo), { body: commentBody });
                     return [4 /*yield*/, getExistingComment(octokit, commentInfo)];
-                case 3:
-                    commentId = _c.sent();
+                case 1:
+                    commentId = _b.sent();
                     if (commentId) {
                         updateExistingComment(octokit, context, commentId, comment);
                     }
                     else {
                         createNewComment(octokit, context, comment);
                     }
-                    _c.label = 4;
-                case 4:
+                    _b.label = 2;
+                case 2:
                     (0,core.endGroup)();
                     return [2 /*return*/];
+            }
+        });
+    });
+}
+
+// EXTERNAL MODULE: external "fs"
+var external_fs_ = __nccwpck_require__(5747);
+var external_fs_default = /*#__PURE__*/__nccwpck_require__.n(external_fs_);
+;// CONCATENATED MODULE: ./src/utils.ts
+var utils_assign = (undefined && undefined.__assign) || function () {
+    utils_assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return utils_assign.apply(this, arguments);
+};
+var utils_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var utils_generator = (undefined && undefined.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (_) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+
+
+function stringToBool(booleanString) {
+    if (booleanString === 'true') {
+        return true;
+    }
+    return false;
+}
+function safeAccess(filePath) {
+    return utils_awaiter(this, void 0, void 0, function () {
+        var e_1;
+        return utils_generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    _a.trys.push([0, 2, , 3]);
+                    return [4 /*yield*/, external_fs_default().promises.access(filePath, (external_fs_default()).constants.F_OK)];
+                case 1:
+                    _a.sent();
+                    return [2 /*return*/, true];
+                case 2:
+                    e_1 = _a.sent();
+                    return [3 /*break*/, 3];
+                case 3: return [2 /*return*/, false];
+            }
+        });
+    });
+}
+function execWithOutput(command, args) {
+    if (args === void 0) { args = []; }
+    return utils_awaiter(this, void 0, void 0, function () {
+        var output, options, error_1;
+        return utils_generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    output = '';
+                    options = {
+                        silent: true,
+                        listeners: {
+                            stdout: function (data) {
+                                output += data.toString();
+                            },
+                            stderr: function (data) {
+                                output += data.toString();
+                            }
+                        },
+                    };
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 3, , 4]);
+                    return [4 /*yield*/, (0,exec.exec)(command, args, options)];
+                case 2:
+                    _a.sent();
+                    return [3 /*break*/, 4];
+                case 3:
+                    error_1 = _a.sent();
+                    return [3 /*break*/, 4];
+                case 4: return [2 /*return*/, output];
+            }
+        });
+    });
+}
+function getChangeEmoji(errorChange) {
+    if (errorChange > 10) {
+        return '😱';
+    }
+    else if (errorChange > 0) {
+        return '😰';
+    }
+    else if (errorChange < -10) {
+        return '🥳';
+    }
+    else if (errorChange < 0) {
+        return '😎';
+    }
+    return '😶';
+}
+function errorDiffLine(errorChange, checkType) {
+    var changeWord = errorChange > 0 ? 'increased' : 'decreased';
+    if (errorChange === 0) {
+        return "There was no change in the number of " + checkType + " errors " + getChangeEmoji(errorChange) + "\n";
+    }
+    return checkType + " errors " + changeWord + " by " + Math.abs(errorChange) + " " + getChangeEmoji(errorChange) + "\n";
+}
+function createCheck(octokit, context) {
+    var _a;
+    return utils_awaiter(this, void 0, void 0, function () {
+        var check;
+        var _this = this;
+        return utils_generator(this, function (_b) {
+            switch (_b.label) {
+                case 0: return [4 /*yield*/, octokit.rest.checks.create(utils_assign(utils_assign({}, context.repo), { name: 'Typescript Monitor', head_sha: (_a = context === null || context === void 0 ? void 0 : context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.head.sha, status: 'in_progress' }))];
+                case 1:
+                    check = _b.sent();
+                    return [2 /*return*/, function (details) { return utils_awaiter(_this, void 0, void 0, function () {
+                            return utils_generator(this, function (_a) {
+                                switch (_a.label) {
+                                    case 0: return [4 /*yield*/, octokit.rest.checks.update(utils_assign(utils_assign(utils_assign({}, context.repo), { check_run_id: check.data.id, completed_at: new Date().toISOString(), status: 'completed' }), details))];
+                                    case 1:
+                                        _a.sent();
+                                        return [2 /*return*/];
+                                }
+                            });
+                        }); }];
             }
         });
     });
@@ -8130,7 +8101,7 @@ function getTypescriptErrorCount() {
                     if (output) {
                         lines = output.split(/(\r?\n)/g);
                         errorAmount = lines.reduce(function (errorCount, line) {
-                            var lineIsError = /error TS\d+:/gm.exec(line);
+                            var lineIsError = /error TS\d+:/gm.test(line);
                             if (lineIsError) {
                                 return errorCount + 1;
                             }
@@ -8210,34 +8181,21 @@ function handleErrorCountChange(errorCounts, checkType, failureSideEffect) {
     }
     return errorDiffLine(errorCountChange, formattedErrorCheckNames[checkType]);
 }
-function getBaseRef(octokit, context) {
+function getBaseRef(context) {
     return src_awaiter(this, void 0, void 0, function () {
-        var prToCheck, pr;
+        var pr;
         return src_generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    if (!(context.eventName == "push")) return [3 /*break*/, 2];
-                    return [4 /*yield*/, getAssociatedPR(octokit, context)];
-                case 1:
-                    prToCheck = _a.sent();
-                    return [2 /*return*/, {
-                            baseSha: prToCheck === null || prToCheck === void 0 ? void 0 : prToCheck.base.sha,
-                            baseRef: prToCheck === null || prToCheck === void 0 ? void 0 : prToCheck.base.ref,
-                        }];
-                case 2:
-                    if (context.eventName == "pull_request" || context.eventName == 'pull_request_target') {
-                        pr = context.payload.pull_request;
-                        return [2 /*return*/, {
-                                baseSha: pr === null || pr === void 0 ? void 0 : pr.base.sha,
-                                baseRef: pr === null || pr === void 0 ? void 0 : pr.base.ref,
-                            }];
-                    }
-                    else {
-                        throw new Error("Unsupported eventName in github.context: " + context.eventName + ". Only \"pull_request\", \"pull_request_target\" and \"push\" triggered workflows are currently supported.");
-                    }
-                    _a.label = 3;
-                case 3: return [2 /*return*/];
+            if (context.eventName == "pull_request" || context.eventName == 'pull_request_target') {
+                pr = context.payload.pull_request;
+                return [2 /*return*/, {
+                        baseSha: pr === null || pr === void 0 ? void 0 : pr.base.sha,
+                        baseRef: pr === null || pr === void 0 ? void 0 : pr.base.ref,
+                    }];
             }
+            else {
+                throw new Error("Unsupported eventName in github.context: " + context.eventName + ". Only \"pull_request\" and \"pull_request_target\" triggered workflows are currently supported.");
+            }
+            return [2 /*return*/];
         });
     });
 }
@@ -8293,7 +8251,7 @@ function run(octokit, context, token) {
                         (0,core.debug)('pr' + JSON.stringify(context.payload, null, 2));
                     }
                     catch (e) { }
-                    return [4 /*yield*/, getBaseRef(octokit, context)];
+                    return [4 /*yield*/, getBaseRef(context)];
                 case 2:
                     _a = _d.sent(), baseSha = _a.baseSha, baseRef = _a.baseRef;
                     if (!baseSha && !baseRef) {

@@ -87,18 +87,3 @@ export async function createCheck(octokit: InstanceType<typeof GitHub>, context:
 		});
 	};
 }
-
-export async function getAssociatedPR(octokit: InstanceType<typeof GitHub>, context: Context) {
-	try {
-		const { data: associatedPRs } = await octokit.rest.repos.listPullRequestsAssociatedWithCommit(
-			{
-				...context.repo,
-				commit_sha: context.payload.after,
-			
-			}
-		)
-		return associatedPRs.find(pr => pr.state === 'open');
-	} catch (error) {
-		console.log('Error getting PR associated with this commit', error)
-	}
-}

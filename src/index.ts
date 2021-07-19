@@ -3,7 +3,7 @@ import { getInput, setFailed, startGroup, endGroup, debug } from '@actions/core'
 import { Context } from '@actions/github/lib/context';
 import { GitHub } from "@actions/github/lib/utils";
 import { installStep, checkoutBaseBranch, addOrUpdateComment } from "./steps";
-import { createCheck, errorDiffLine, execWithOutput, getAssociatedPR, safeAccess, stringToBool } from "./utils";
+import { createCheck, errorDiffLine, execWithOutput, safeAccess, stringToBool } from "./utils";
 
 const tsInput = 'check-typescript';
 const lintInput = 'check-linting';
@@ -34,7 +34,7 @@ async function getTypescriptErrorCount(): Promise<number> {
 		const lines = output.split(/(\r?\n)/g);
 		const errorAmount = lines.reduce((errorCount, line) => {
 			const lineIsError =
-				/error TS\d+:/gm.exec(
+				/error TS\d+:/gm.test(
 					line,
 				);
 	
@@ -82,14 +82,8 @@ function handleErrorCountChange(
 	return errorDiffLine(errorCountChange, formattedErrorCheckNames[checkType]);
 }
 
-async function getBaseRef(octokit: InstanceType<typeof GitHub>, context: Context): Promise<{ baseSha?: string, baseRef?: string }> {
-	if (context.eventName == "push") {
-		const prToCheck = await getAssociatedPR(octokit, context);
-		return {
-			baseSha: prToCheck?.base.sha,
-			baseRef: prToCheck?.base.ref,
-		}
-	} else if (context.eventName == "pull_request" || context.eventName == 'pull_request_target') {
+async function getBaseRef(context: Context): Promise<{ baseSha?: string, baseRef?: string }> {
+	if (context.eventName == "pull_request" || context.eventName == 'pull_request_target') {
 		const pr = context.payload.pull_request;
 		return {
 			baseSha: pr?.base.sha,
@@ -97,7 +91,7 @@ async function getBaseRef(octokit: InstanceType<typeof GitHub>, context: Context
 		}
 	} else {
 		throw new Error(
-			`Unsupported eventName in github.context: ${context.eventName}. Only "pull_request", "pull_request_target" and "push" triggered workflows are currently supported.`
+			`Unsupported eventName in github.context: ${context.eventName}. Only "pull_request" and "pull_request_target" triggered workflows are currently supported.`
 		);
 	}
 }
@@ -140,7 +134,7 @@ export default async function run(octokit: InstanceType<typeof GitHub>, context:
 		debug('pr' + JSON.stringify(context.payload, null, 2));
 	} catch (e) { }
 
-	const { baseSha, baseRef } = await getBaseRef(octokit, context);
+	const { baseSha, baseRef } = await getBaseRef(context);
 	
 	if (!baseSha && !baseRef) {
 		console.log('Could not find base branch, cancelling workflow');

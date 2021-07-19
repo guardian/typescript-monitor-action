@@ -2,7 +2,6 @@ import { startGroup, endGroup } from '@actions/core';
 import { exec } from '@actions/exec';
 import { Context } from '@actions/github/lib/context';
 import { GitHub } from "@actions/github/lib/utils";
-import { getAssociatedPR } from "./utils";
 
 type ComparisonBranchType = 'current' | 'base';
 
@@ -103,13 +102,7 @@ async function updateExistingComment(octokit: InstanceType<typeof GitHub>, conte
 }
 
 export async function addOrUpdateComment(octokit: InstanceType<typeof GitHub>, context: Context, commentBody: string) {
-	let issue_number = context.issue?.number;
-	
-	if (context.eventName === "push") {
-		console.log('Push event, looking for PR associated with this commit');
-		const prToUpdate = await getAssociatedPR(octokit, context);
-		issue_number = prToUpdate?.number ?? issue_number;
-	}
+	const issue_number = context.issue?.number;
 	
 	if (issue_number) {
 		const commentInfo = {
