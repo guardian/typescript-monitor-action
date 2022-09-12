@@ -10,5 +10,6 @@ jobs:
       DEBUG: true
       ORG: guardian-test
       SKIP_NODE: false
+      EXCLUDE: dist
     secrets:
        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
